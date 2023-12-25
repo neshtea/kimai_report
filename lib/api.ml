@@ -44,14 +44,18 @@ type request_method = GET
 type endpoint = string
 
 type 'a api_request =
-  | Api_request of (request_method * endpoint * 'a Decoder.Yojson.Safe.decoder)
+  | Api_request of
+      (request_method
+      * endpoint
+      * (string * string) list
+      * 'a Decoder.Yojson.Safe.decoder)
 
-let make_api_request request_method endpoint request_decoder =
-  Api_request (request_method, endpoint, request_decoder)
+let make_api_request request_method endpoint args request_decoder =
+  Api_request (request_method, endpoint, args, request_decoder)
 ;;
 
-let make_api_get_request endpoint request_decoder =
-  make_api_request GET endpoint request_decoder
+let make_api_get_request ?(args = []) endpoint request_decoder =
+  make_api_request GET endpoint args request_decoder
 ;;
 
 let request request_method endpoint { api_url; api_user; api_pwd } =
@@ -72,9 +76,13 @@ let ( --> ) m json_body_fn =
 ;;
 
 let run_request { api_url; api_user; api_pwd } = function
-  | Api_request (request_method, endpoint, request_decoder) ->
+  | Api_request (request_method, endpoint, args, request_decoder) ->
     let headers = request_headers api_user api_pwd in
-    let uri = Printf.sprintf "%s%s" api_url endpoint |> Uri.of_string in
+    let uri =
+      Uri.add_query_params'
+        (Printf.sprintf "%s%s" api_url endpoint |> Uri.of_string)
+        args
+    in
     let module C = Cohttp_lwt_unix.Client in
     (match request_method with
      | GET -> C.get ~headers uri --> request_decoder)

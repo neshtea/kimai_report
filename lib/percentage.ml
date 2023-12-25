@@ -76,10 +76,12 @@ let render_result sm =
     sm
 ;;
 
-let run request_cfg =
+let run start_date end_date request_cfg =
   let ( let* ) = Api.bind in
   let* projects = Api.run_request request_cfg P.api_get in
-  let* timesheet = Api.run_request request_cfg Timesheet.get_timesheet in
+  let* timesheet =
+    Api.run_request request_cfg @@ Timesheet.get_timesheet start_date end_date
+  in
   let durations = project_durations timesheet (projects_map projects) in
   let overall_duration =
     SM.bindings durations |> List.fold_left (fun acc kv -> acc +. snd kv) 0.0

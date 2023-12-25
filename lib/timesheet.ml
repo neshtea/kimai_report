@@ -47,7 +47,15 @@ module SM = Map.Make (String)
 module A = Activity
 module P = Project
 
-let get_timesheet = Api.make_api_get_request "/timesheets" timesheet_decoder
+let get_timesheet start_date end_date =
+  Api.make_api_get_request
+    ~args:
+      [ "begin", Date.to_html5_string start_date
+      ; "end", Date.to_html5_string end_date
+      ]
+    "/timesheets"
+    timesheet_decoder
+;;
 
 let projects_map =
   List.fold_left (fun m p -> SM.add (P.name p) (P.id p) m) SM.empty
@@ -81,11 +89,17 @@ let fill_description activities_map entry =
   { entry with description }
 ;;
 
-let run ?project_name request_cfg =
+let run ?project_name start_date end_date request_cfg =
+  Printf.printf
+    "start %s end %s"
+    (Date.to_html5_string start_date)
+    (Date.to_html5_string end_date);
   let ( let* ) = Api.bind in
   let* projects = Api.run_request request_cfg P.api_get in
   let* activities = Api.run_request request_cfg A.api_get in
-  let* timesheet = Api.run_request request_cfg get_timesheet in
+  let* timesheet =
+    Api.run_request request_cfg @@ get_timesheet start_date end_date
+  in
   timesheet
   |> List.filter (project_matches project_name @@ projects_map projects)
   |> List.map (fill_description @@ activities_map activities)

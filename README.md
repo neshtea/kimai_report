@@ -35,8 +35,10 @@ $ nix run github:neshtea/kimai_report -- --help
 # Generate timesheet report
 $ nix run github:neshtea/kimai_report -- timesheet --api_url https://<username>.kimai.cloud/api --api_user user@host.org --api_pwd super_secure_password
 
-# Generate timesheet report for a specific project (by project name)
-$ nix run github:neshtea/kimai_report -- timesheet --api_url https://<username>.kimai.cloud/api --api_user user@host.org --api_pwd super_secure_password --project my-project-name
+# Generate timesheet report for a specific project (by project name), begin and end (inclusively)
+
+$ nix run github:neshtea/kimai_report -- timesheet --api_url https://<username>.kimai.cloud/api --api_user user@host.org --api_pwd super_secure_password --project my-project-name --begin 2023-12-01 --end 2023-12-23
+
 2023-12-12,1.000000,"Projektverwaltung"
 2023-12-13,2.000000,"Tickets 529, 530"
 2023-12-14,0.500000,"Recherche: Docker Registry"
@@ -55,7 +57,8 @@ $ nix run github:neshtea/kimai_report -- timesheet --api_url https://<username>.
 2023-12-22,2.000000,"Release 1.4.1 (CMDB-Report Hotfix)"
 
 # Generate a percentages report
-$ nix run github:neshtea/kimai_report -- percentage --api_url https://<username>.kimai.cloud/api --api_user user@host.org --api_pwd super_secure_password
+$ nix run github:neshtea/kimai_report -- percentage --api_url https://<username>.kimai.cloud/api --api_user user@host.org --api_pwd super_secure_password --begin 2023-12-01 --end 2023-12-31
+
 "Project","Percentage (exact)","Percentage (rounded)"
 Internal,12h,16.845878%,17%
 Project_A,6h,8.602151%,9%
