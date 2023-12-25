@@ -73,21 +73,7 @@ let render_result sm =
         overall_hours
         percentage
         percentage_rounded)
-    sm;
-  let percentages =
-    SM.bindings sm
-    |> List.map (fun (_, (_, x, _)) -> x)
-    |> List.fold_left ( +. ) 0.
-  in
-  let percentages_rounded =
-    SM.bindings sm
-    |> List.map (fun (_, (_, _, x)) -> x)
-    |> List.fold_left ( + ) 0
-  in
-  Printf.printf
-    "control exact: %f%%, control rounded: %i%%"
-    percentages
-    percentages_rounded
+    sm
 ;;
 
 let run request_cfg =
