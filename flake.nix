@@ -4,13 +4,8 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    nix-filter.url = "github:numtide/nix-filter";
     ocaml-overlay = {
       url = "github:nix-ocaml/nix-overlays";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    gitignore = {
-      url = "github:hercules-ci/gitignore.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -31,23 +26,6 @@
           ocamlPackages.yojson
           ocamlPackages.cmdliner
         ];
-        # Filtered sources (prevents unecessary rebuilds)
-        sources = {
-          ocaml = inputs.nix-filter.lib {
-            root = ./.;
-            include = [
-              ".ocamlformat"
-              "dune-project"
-              (inputs.nix-filter.lib.inDirectory "bin")
-              (inputs.nix-filter.lib.inDirectory "lib")
-              (inputs.nix-filter.lib.inDirectory "test")
-            ];
-          };
-          nix = inputs.nix-filter.lib {
-            root = ./.;
-            include = [ (inputs.nix-filter.lib.matchExt "nix") ];
-          };
-        };
       in {
 
         formatter = pkgs.nixfmt;
@@ -59,7 +37,7 @@
             version = "0.1.0";
             duneVersion = "3";
             dontDetectOcamlConflicts = true;
-            src = sources.ocaml;
+            src = ./.;
             strictDeps = true;
             buildInputs = ocamlDeps;
           };
