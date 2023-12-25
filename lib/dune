@@ -1,0 +1,11 @@
+(library
+ (name kimai_report)
+ (libraries ptime ptime.clock.os
+	    lwt
+	    yojson
+	    cohttp
+	    cohttp-lwt
+	    cohttp-lwt-unix
+	    str
+	    ))
+
