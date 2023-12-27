@@ -17,11 +17,6 @@ let timestamp_decoder =
   D.map (fun s -> ptime_of_string_exn s) D.string
 ;;
 
-(* the reporting monad *)
-module Monad = struct
-  type 'a m
-end
-
 type request_cfg =
   { api_url : string
   ; api_user : string

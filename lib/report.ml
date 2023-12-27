@@ -60,42 +60,8 @@ module Timesheet = struct
 end
 
 module Percentage = struct
-  let group_by f l =
-    let rec grouping acc = function
-      | [] -> acc
-      | hd :: tl ->
-        let l1, l2 = List.partition (fun x -> f hd == f x) tl in
-        grouping ((f hd, hd :: l1) :: acc) l2
-    in
-    grouping [] l
-  ;;
-
-  let group_by_project = group_by (fun time_entry -> Entry.project time_entry)
-
   module SM = Map.Make (String)
   module IM = Map.Make (Int)
-
-  let time_entries_by_project time_entries (projects : Project.t IM.t) =
-    List.fold_left
-      (fun m time_entry ->
-        let label =
-          match Entry.project time_entry with
-          | None -> "unknown"
-          | Some project_id ->
-            (match IM.find_opt project_id projects with
-             | None -> "unknown"
-             | Some { name; _ } -> name)
-        in
-        SM.update
-          label
-          (function
-            | None -> Some [ time_entry ]
-            | Some time_entries -> Some (time_entry :: time_entries))
-          m)
-      SM.empty
-      time_entries
-  ;;
-
   module P = Project
 
   let projects_map =
@@ -121,19 +87,6 @@ module Percentage = struct
           m)
       SM.empty
       time_entries
-  ;;
-
-  let render_result sm =
-    print_endline "\"Project\",\"Percentage (exact)\",\"Percentage (rounded)\"";
-    SM.iter
-      (fun project_name (overall_hours, percentage, percentage_rounded) ->
-        Printf.printf
-          "%s,%ih,%f%%,%i%%\n"
-          project_name
-          overall_hours
-          percentage
-          percentage_rounded)
-      sm
   ;;
 
   let exec (module R : Repo.S) begin_date end_date =
