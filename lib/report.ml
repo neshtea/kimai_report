@@ -34,7 +34,7 @@ module Timesheet = struct
       | None, Some activity_id -> IM.find_opt activity_id activities_map
       | None, None -> None
     in
-    { entry with description }
+    Entry.with_description entry description
   ;;
 
   let exec ?(project_name = None) (module R : Repo.S) begin_date end_date =

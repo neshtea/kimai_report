@@ -10,6 +10,7 @@ let date { date; _ } = date
 let project { project; _ } = project
 let duration { duration; _ } = duration
 let description { description; _ } = description
+let with_description t description = { t with description }
 let activity { activity; _ } = activity
 
 let split_timestamp s =
