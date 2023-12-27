@@ -17,5 +17,3 @@ let decoder =
   D.return { id; name }
 ;;
 
-let list_decoder = D.list decoder
-let api_get = Api.make_api_get_request "/projects" list_decoder

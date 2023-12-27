@@ -1,25 +1,25 @@
 module C = Cmdliner
+module K = Kimai_report
 
-let timesheet api_url api_user api_pwd start_date end_date project_name =
+let timesheet api_url api_user api_pwd begin_date end_date project_name =
+  let module RC = (val K.Api.make_request_cfg_m api_url api_user api_pwd) in
+  let module R = K.Repo.Cohttp (RC) in
   match
-    Lwt_main.run
-    @@ Kimai_report.Timesheet.run ?project_name start_date end_date
-    @@ Kimai_report.Api.make_request_cfg api_url api_user api_pwd
+    K.Report.Timesheet.exec ~project_name (module R) begin_date end_date
+    |> Lwt_main.run
   with
-  | Error err ->
-    print_endline @@ "Error:" ^ Kimai_report.Decoder.Yojson.Safe.Error.show err
-  | Ok timesheet -> Kimai_report.Timesheet.render_timesheet timesheet
+  | Error err -> print_endline @@ "Error:" ^ err
+  | Ok timesheet -> K.Report.Timesheet.print_csv timesheet
 ;;
 
-let percentage api_url api_user api_pwd start_date end_date =
+let percentage api_url api_user api_pwd begin_date end_date =
+  let module RC = (val K.Api.make_request_cfg_m api_url api_user api_pwd) in
+  let module R = K.Repo.Cohttp (RC) in
   match
-    Lwt_main.run
-    @@ Kimai_report.Percentage.run start_date end_date
-    @@ Kimai_report.Api.make_request_cfg api_url api_user api_pwd
+    K.Report.Percentage.exec (module R) begin_date end_date |> Lwt_main.run
   with
-  | Error err ->
-    print_endline @@ "Error:" ^ Kimai_report.Decoder.Yojson.Safe.Error.show err
-  | Ok percentages -> Kimai_report.Percentage.render_result percentages
+  | Error err -> print_endline @@ "Error:" ^ err
+  | Ok percentages -> K.Report.Percentage.print_csv percentages
 ;;
 
 let api_url =
@@ -47,11 +47,11 @@ let project_name =
 
 let date =
   let parse s =
-    try Kimai_report.Date.from_string_exn s |> Result.ok with
-    | Kimai_report.Date.Date_format_error s -> Error (`Msg s)
+    try K.Date.from_string_exn s |> Result.ok with
+    | K.Date.Date_format_error s -> Error (`Msg s)
   in
   let str = Printf.sprintf in
-  let err_str s = str "+%s" (Kimai_report.Date.to_html5_string s) in
+  let err_str s = str "+%s" (K.Date.to_html5_string s) in
   let print ppf p = Format.fprintf ppf "%s" (err_str p) in
   C.Arg.conv ~docv:"FROM" (parse, print)
 ;;
@@ -61,10 +61,7 @@ let begin_date =
     "The earliest date to consider when generating the report. Format is \
      YYYY-mm-DD. Defaults to the first of the current month."
   in
-  C.Arg.(
-    value
-    @@ opt date (Kimai_report.Date.start_of_month ())
-    @@ info [ "begin" ] ~doc)
+  C.Arg.(value @@ opt date (K.Date.start_of_month ()) @@ info [ "begin" ] ~doc)
 ;;
 
 let end_date =
@@ -72,7 +69,7 @@ let end_date =
     "The latest date to consider when generating the report. Format is \
      YYYY-mm-DD. Default to todays date."
   in
-  C.Arg.(value @@ opt date (Kimai_report.Date.today ()) @@ info [ "end" ] ~doc)
+  C.Arg.(value @@ opt date (K.Date.today ()) @@ info [ "end" ] ~doc)
 ;;
 
 let timesheet_t =

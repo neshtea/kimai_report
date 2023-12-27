@@ -30,6 +30,22 @@ type request_cfg =
 
 let make_request_cfg api_url api_user api_pwd = { api_url; api_user; api_pwd }
 
+module type REQUEST_CFG = sig
+  val api_url : string
+  val api_user : string
+  val api_pwd : string
+  val record : request_cfg
+end
+
+let make_request_cfg_m api_url api_user api_pwd =
+  (module struct
+    let api_url = api_url
+    let api_user = api_user
+    let api_pwd = api_pwd
+    let record = make_request_cfg api_url api_user api_pwd
+  end : REQUEST_CFG)
+;;
+
 let request_headers api_user api_pwd =
   let module H = Cohttp.Header in
   H.add_list

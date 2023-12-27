@@ -1,0 +1,46 @@
+type 'a or_error = ('a, string) result Lwt.t
+(* not sure if I wan to have the Lwt async in the signature. *)
+
+let or_error_string m =
+  let ( >>= ) = Lwt.bind in
+  m
+  >>= function
+  | Error err -> Decoder.Yojson.Safe.Error.show err |> Lwt.return_error
+  | Ok projects -> Lwt.return_ok projects
+;;
+
+module type S = sig
+  val find_projects : unit -> Project.t list or_error
+  val find_activities : unit -> Activity.t list or_error
+  val find_timesheet : Date.t -> Date.t -> Entry.t list or_error
+end
+
+module Cohttp (R : Api.REQUEST_CFG) : S = struct
+  module D = Decoder.Yojson.Safe
+
+  let find_projects () =
+    D.list Project.decoder
+    |> Api.make_api_get_request "/projects"
+    |> Api.run_request R.record
+    |> or_error_string
+  ;;
+
+  let find_activities () =
+    D.list Activity.decoder
+    |> Api.make_api_get_request "/activities"
+    |> Api.run_request R.record
+    |> or_error_string
+  ;;
+
+  let find_timesheet begin_date end_date =
+    D.list Entry.decoder
+    |> Api.make_api_get_request
+         ~args:
+           [ "begin", Date.to_html5_string begin_date
+           ; "end", Date.to_html5_string end_date
+           ]
+         "/timesheets"
+    |> Api.run_request R.record
+    |> or_error_string
+  ;;
+end

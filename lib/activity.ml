@@ -16,6 +16,3 @@ let decoder =
   let* name = D.field "name" D.string in
   D.return { id; name }
 ;;
-
-let list_decoder = D.list decoder
-let api_get = Api.make_api_get_request "/activities" list_decoder
