@@ -3,7 +3,6 @@ type t =
   ; name : string
   }
 
-let make id name = { id; name }
 let id { id; _ } = id
 let name { name; _ } = name
 
