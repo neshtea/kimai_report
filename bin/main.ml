@@ -2,7 +2,7 @@ module C = Cmdliner
 module K = Kimai_report
 
 let timesheet api_url api_user api_pwd begin_date end_date project_name =
-  let module RC = (val K.Api.make_request_cfg_m api_url api_user api_pwd) in
+  let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
   let module R = K.Repo.Cohttp (RC) in
   match
     K.Report.Timesheet.exec ~project_name (module R) begin_date end_date
@@ -13,7 +13,7 @@ let timesheet api_url api_user api_pwd begin_date end_date project_name =
 ;;
 
 let percentage api_url api_user api_pwd begin_date end_date =
-  let module RC = (val K.Api.make_request_cfg_m api_url api_user api_pwd) in
+  let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
   let module R = K.Repo.Cohttp (RC) in
   match
     K.Report.Percentage.exec (module R) begin_date end_date |> Lwt_main.run
@@ -21,6 +21,8 @@ let percentage api_url api_user api_pwd begin_date end_date =
   | Error err -> print_endline @@ "Error:" ^ err
   | Ok percentages -> K.Report.Percentage.print_csv percentages
 ;;
+
+let server port = K.Web.start port
 
 let api_url =
   let doc = "The base url of the API endpoint you want to talk to." in
@@ -72,6 +74,11 @@ let end_date =
   C.Arg.(value @@ opt date (K.Date.today ()) @@ info [ "end" ] ~doc)
 ;;
 
+let port =
+  let doc = "The port the webserver should listen on. Defaults to 6272." in
+  C.Arg.(value @@ opt int 6272 @@ info [ "port" ] ~doc)
+;;
+
 let timesheet_t =
   C.Term.(
     const timesheet
@@ -98,6 +105,13 @@ let percentage_cmd =
   C.Cmd.v info percentage_t
 ;;
 
+let server_t = C.Term.(const server $ port)
+
+let server_cmd =
+  let info = C.Cmd.info "server" in
+  C.Cmd.v info server_t
+;;
+
 let main_cmd =
   let doc =
     "generate controlling information for internal controlling from a kimai \
@@ -105,7 +119,7 @@ let main_cmd =
   in
   let info = C.Cmd.info "kimai_report" ~doc in
   let default = timesheet_t in
-  C.Cmd.group info ~default [ timesheet_cmd; percentage_cmd ]
+  C.Cmd.group info ~default [ timesheet_cmd; percentage_cmd; server_cmd ]
 ;;
 
 let main () = exit (C.Cmd.eval main_cmd)
