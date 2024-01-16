@@ -22,8 +22,6 @@ let percentage api_url api_user api_pwd begin_date end_date =
   | Ok percentages -> K.Report.Percentage.print_csv percentages
 ;;
 
-let server port = K.Web.start port
-
 let api_url =
   let doc = "The base url of the API endpoint you want to talk to." in
   C.Arg.(value @@ pos 0 string "" @@ info [] ~docv:"API_URL" ~doc)
@@ -105,13 +103,6 @@ let percentage_cmd =
   C.Cmd.v info percentage_t
 ;;
 
-let server_t = C.Term.(const server $ port)
-
-let server_cmd =
-  let info = C.Cmd.info "server" in
-  C.Cmd.v info server_t
-;;
-
 let main_cmd =
   let doc =
     "generate controlling information for internal controlling from a kimai \
@@ -119,7 +110,7 @@ let main_cmd =
   in
   let info = C.Cmd.info "kimai_report" ~doc in
   let default = timesheet_t in
-  C.Cmd.group info ~default [ timesheet_cmd; percentage_cmd; server_cmd ]
+  C.Cmd.group info ~default [ timesheet_cmd; percentage_cmd ]
 ;;
 
 let main () = exit (C.Cmd.eval main_cmd)
