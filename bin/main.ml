@@ -1,7 +1,15 @@
 module C = Cmdliner
 module K = Kimai_report
 
-let timesheet api_url api_user api_pwd begin_date end_date project_name =
+let timesheet
+  api_url
+  api_user
+  api_pwd
+  begin_date
+  end_date
+  project_name
+  include_overall_duration
+  =
   let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
   let module R = K.Repo.Cohttp (RC) in
   match
@@ -9,7 +17,12 @@ let timesheet api_url api_user api_pwd begin_date end_date project_name =
     |> Lwt_main.run
   with
   | Error err -> print_endline @@ "Error:" ^ err
-  | Ok timesheet -> K.Report.Timesheet.print_csv timesheet
+  | Ok timesheet ->
+    let () = K.Report.Timesheet.print_csv timesheet in
+    let show_duration = Option.value include_overall_duration ~default:false in
+    if show_duration
+    then K.Report.Timesheet.print_overall_duration timesheet
+    else ()
 ;;
 
 let percentage api_url api_user api_pwd begin_date end_date =
@@ -45,6 +58,13 @@ let project_name =
   C.Arg.(value @@ opt (some string) None @@ info [ "project" ] ~doc)
 ;;
 
+let show_overall_duration =
+  let doc =
+    "Whether or not to print the overall duration of the generated timesheet."
+  in
+  C.Arg.(value @@ opt (some bool) None @@ info [ "show_duration" ] ~doc)
+;;
+
 let date =
   let parse s =
     try K.Date.from_string_exn s |> Result.ok with
@@ -72,11 +92,6 @@ let end_date =
   C.Arg.(value @@ opt date (K.Date.today ()) @@ info [ "end" ] ~doc)
 ;;
 
-let port =
-  let doc = "The port the webserver should listen on. Defaults to 6272." in
-  C.Arg.(value @@ opt int 6272 @@ info [ "port" ] ~doc)
-;;
-
 let timesheet_t =
   C.Term.(
     const timesheet
@@ -85,7 +100,8 @@ let timesheet_t =
     $ api_pwd
     $ begin_date
     $ end_date
-    $ project_name)
+    $ project_name
+    $ show_overall_duration)
 ;;
 
 let timesheet_cmd =

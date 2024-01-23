@@ -57,6 +57,13 @@ module Timesheet = struct
         (Entry.duration entry)
         (Option.value (Entry.description entry) ~default:"no description"))
   ;;
+
+  let print_overall_duration timesheet =
+    let duration =
+      List.fold_left (fun acc entry -> acc +. Entry.duration entry) 0. timesheet
+    in
+    Printf.printf "Overall hours:\n%f" @@ duration
+  ;;
 end
 
 module Percentage = struct
