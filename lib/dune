@@ -7,5 +7,7 @@
 	    cohttp-lwt
 	    cohttp-lwt-unix
 	    str
+	    dream
+	    dream-html
 	    ))
 

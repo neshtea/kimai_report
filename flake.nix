@@ -25,6 +25,8 @@
           ocamlPackages.cohttp-lwt-unix
           ocamlPackages.yojson
           ocamlPackages.cmdliner
+          ocamlPackages.dream
+          ocamlPackages.dream-html
         ];
       in {
 

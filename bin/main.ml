@@ -1,6 +1,12 @@
 module C = Cmdliner
 module K = Kimai_report
 
+let server api_url api_user api_pwd port =
+  let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
+  let module R = K.Repo.Cohttp (RC) in
+  K.Web.start_server (module R : K.Repo.S) port
+;;
+
 let timesheet
   api_url
   api_user
@@ -119,6 +125,18 @@ let percentage_cmd =
   C.Cmd.v info percentage_t
 ;;
 
+let port =
+  let doc = "The port on which the webserver should listen" in
+  C.Arg.(value @@ opt int 8080 @@ info [ "port" ] ~doc)
+;;
+
+let server_t = C.Term.(const server $ api_url $ api_user $ api_pwd $ port)
+
+let server_cmd =
+  let info = C.Cmd.info "server" in
+  C.Cmd.v info server_t
+;;
+
 let main_cmd =
   let doc =
     "generate controlling information for internal controlling from a kimai \
@@ -126,7 +144,7 @@ let main_cmd =
   in
   let info = C.Cmd.info "kimai_report" ~doc in
   let default = timesheet_t in
-  C.Cmd.group info ~default [ timesheet_cmd; percentage_cmd ]
+  C.Cmd.group info ~default [ timesheet_cmd; percentage_cmd; server_cmd ]
 ;;
 
 let main () = exit (C.Cmd.eval main_cmd)

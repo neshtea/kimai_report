@@ -21,7 +21,15 @@
  (description "A longer description")
  (depends (ocaml (>= 4.08.0))
           (dune (>= 3.11))
-	  ptime ptime.clock.os lwt yojson cohttp cohttp-lwt cohttp-lwt-unix)
+	  ptime
+	  ptime.clock.os
+	  lwt
+	  yojson
+	  cohttp
+	  cohttp-lwt
+	  cohttp-lwt-unix
+	  dream
+	  dream-html)
  (tags
   (topics "to describe" your project)))
 

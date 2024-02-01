@@ -23,6 +23,10 @@ Generate a timesheet.  Optionally, generate it for one project (by name).
 
 Generate the percentages (projects to logged time spent on these projects).
 
+### `server`
+
+A small webclient for fetching and displaying reports.
+
 ## Usage
 
 You can either check out this repo and use the nix build yourself or run it
