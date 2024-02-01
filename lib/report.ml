@@ -58,11 +58,12 @@ module Timesheet = struct
         (Option.value (Entry.description entry) ~default:"no description"))
   ;;
 
+  let overall_duration timesheet =
+    List.fold_left (fun acc entry -> acc +. Entry.duration entry) 0. timesheet
+  ;;
+
   let print_overall_duration timesheet =
-    let duration =
-      List.fold_left (fun acc entry -> acc +. Entry.duration entry) 0. timesheet
-    in
-    Printf.printf "Overall hours:\n%f" @@ duration
+    timesheet |> overall_duration |> Printf.printf "Overall hours:\n%f"
   ;;
 end
 
