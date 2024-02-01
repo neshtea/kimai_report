@@ -36,6 +36,9 @@ module Cohttp (RC : Api.REQUEST_CFG) : S = struct
          ~args:
            [ "begin", Date.to_html5_string begin_date
            ; "end", Date.to_html5_string end_date
+           ; "size", "1000"
+             (* NOTE: I don't think we'll ever have that many entries in a
+                particular range, but the default (NULL) is too low. *)
            ]
          "/timesheets"
     |> run
