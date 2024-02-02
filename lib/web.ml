@@ -13,7 +13,12 @@ module View = struct
       []
       [ H.h2 [] [ D.txt "Timesheets Report" ]
       ; H.form
-          [ H.method_ `GET; H.action "/timesheets" ]
+          [ H.method_ `GET
+          ; H.action "/timesheets"
+          ; Hx.get "/timesheets"
+          ; Hx.target "#timesheets_report_table"
+          ; Hx.swap "outerHTML"
+          ]
           [ H.label [ H.for_ "begin" ] [ D.txt "Begin" ]
           ; H.input
               [ H.id "begin"
@@ -32,9 +37,8 @@ module View = struct
   ;;
 
   let timesheets_report_table report =
-    print_endline @@ Printf.sprintf "length %i" @@ List.length report;
     H.div
-      []
+      [ H.id "timesheets_report_table" ]
       [ H.p
           []
           [ D.txt "Overall duration: %fh"
@@ -84,7 +88,12 @@ module View = struct
       []
       [ H.h2 [] [ D.txt "Percentage Report" ]
       ; H.form
-          [ H.method_ `GET; H.action "/percentage" ]
+          [ H.method_ `GET
+          ; H.action "/percentage"
+          ; Hx.get "/percentage"
+          ; Hx.target "#percentage_report_table"
+          ; Hx.swap "outerHTML"
+          ]
           [ H.label [ H.for_ "begin" ] [ D.txt "Begin" ]
           ; H.input
               [ H.id "begin"
@@ -102,7 +111,7 @@ module View = struct
 
   let percentage_report_table report =
     H.table
-      []
+      [ H.id "percentage_report_table" ]
       [ H.thead
           []
           [ H.th [] [ D.txt "Project Name" ]
@@ -130,22 +139,20 @@ module View = struct
       [ H.lang "en" ]
       [ H.head [] [ H.title [] "kimai_report web" ]
       ; H.body
-          []
-          [ H.h1 [] [ D.txt "kimai_report web" ]
+          [ Hx.boost true ]
+          [ H.script [ H.src "https://unpkg.com/htmx.org@1.9.10" ] ""
+          ; H.h1 [] [ D.txt "kimai_report web" ]
           ; timesheets_report_form ()
-          ; (match timesheets_report with
-             | None -> H.null []
-             | Some report -> timesheets_report_table report)
+          ; timesheets_report_table (Option.value ~default:[] timesheets_report)
           ; percentage_report_form ()
-          ; (match percentage_report with
-             | None -> H.null []
-             | Some report -> percentage_report_table report)
+          ; percentage_report_table (Option.value ~default:[] percentage_report)
           ]
       ]
   ;;
 end
 
 module Route = struct
+  let is_hx_request req = Dream.has_header req "HX-Request"
   let handle_get_index _req = View.index None None |> Dream_html.respond
   let ( let* ) = Lwt.bind
 
@@ -165,7 +172,10 @@ module Route = struct
       Report.Percentage.exec (module R) (begin_date begin_) (end_date end_)
     in
     match lwt_report with
-    | Ok report -> View.index None (Some report) |> Dream_html.respond
+    | Ok report ->
+      if is_hx_request req
+      then View.percentage_report_table report |> Dream_html.respond
+      else View.index None (Some report) |> Dream_html.respond
     | Error err -> Dream.html ~status:`Internal_Server_Error err
   ;;
 
@@ -181,7 +191,10 @@ module Route = struct
         ~project_name
     in
     match lwt_report with
-    | Ok report -> View.index (Some report) None |> Dream_html.respond
+    | Ok report ->
+      if is_hx_request req
+      then View.timesheets_report_table report |> Dream_html.respond
+      else View.index (Some report) None |> Dream_html.respond
     | Error err -> Dream.html ~status:`Internal_Server_Error err
   ;;
 
