@@ -41,25 +41,33 @@ let request_headers api_user api_pwd =
     ]
 ;;
 
-type request_method = GET
+type 'a body_decoder = 'a Decoder.Yojson.Safe.decoder
+
+(* FIXME *)
+type body_encoder = string
+
+type 'a request_method =
+  | Get of 'a body_decoder
+  | Post of (body_encoder * 'a body_decoder)
+
 type endpoint = string
 type request_args = (string * string) list
 
 let make_request_args args = args
 
 type 'a api_request =
-  | Api_request of
-      (request_method
-      * endpoint
-      * request_args
-      * 'a Decoder.Yojson.Safe.decoder)
+  | Api_request of ('a request_method * endpoint * request_args)
 
-let make_api_request request_method endpoint args request_decoder =
-  Api_request (request_method, endpoint, args, request_decoder)
+let make_api_request request_method endpoint args =
+  Api_request (request_method, endpoint, args)
 ;;
 
-let make_api_get_request ?(args = []) endpoint request_decoder =
-  make_api_request GET endpoint args request_decoder
+let make_api_get_request ?(args = []) endpoint body_decoder =
+  make_api_request (Get body_decoder) endpoint args
+;;
+
+let make_api_post_request ?(args = []) endpoint body_encoder body_decoder =
+  make_api_request (Post (body_encoder, body_decoder)) endpoint args
 ;;
 
 module Response_error = struct
@@ -99,7 +107,7 @@ let ( --> ) m json_body_fn =
 ;;
 
 let run_request (module RC : REQUEST_CFG) = function
-  | Api_request (request_method, endpoint, args, request_decoder) ->
+  | Api_request (request_method, endpoint, args) ->
     let headers = request_headers RC.api_user RC.api_pwd in
     let uri =
       Uri.add_query_params'
@@ -108,7 +116,10 @@ let run_request (module RC : REQUEST_CFG) = function
     in
     let module C = Cohttp_lwt_unix.Client in
     (match request_method with
-     | GET -> C.get ~headers uri --> request_decoder)
+     | Get body_decoder -> C.get ~headers uri --> body_decoder
+     | Post (body_encoder, body_decoder) ->
+       C.post ~body:(Cohttp_lwt.Body.of_string body_encoder) ~headers uri
+       --> body_decoder)
 ;;
 
 let return x = Lwt.return_ok x
