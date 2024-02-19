@@ -1,7 +1,4 @@
 module Timesheet = struct
-  module A = Activity
-  module P = Project
-
   let project_matches project_name project_by_name =
     match project_name with
     | None -> fun _ -> true
@@ -13,7 +10,7 @@ module Timesheet = struct
          | Some project_id ->
            (match project_by_name project_name with
             | None -> false
-            | Some p -> P.id p == project_id))
+            | Some p -> Project.id p == project_id))
   ;;
 
   let fill_description activity_by_id entry =
@@ -22,7 +19,7 @@ module Timesheet = struct
       | Some description, Some _ -> Some description
       | Some description, None -> Some description
       | None, Some activity_id ->
-        activity_by_id activity_id |> Option.map A.name
+        activity_by_id activity_id |> Option.map Activity.name
       | None, None -> None
     in
     Entry.with_description entry description
@@ -36,8 +33,8 @@ module Timesheet = struct
     let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
     timesheet
     |> List.filter
-         (project_matches project_name @@ RU.by_name (module P) projects)
-    |> List.map (fill_description @@ RU.by_id (module A) activities)
+         (project_matches project_name @@ RU.by_name (module Project) projects)
+    |> List.map (fill_description @@ RU.by_id (module Activity) activities)
     |> List.rev
     |> Lwt.return_ok
   ;;
@@ -62,7 +59,6 @@ end
 
 module Percentage = struct
   module SM = Map.Make (String)
-  module P = Project
 
   let project_durations time_entries project_by_id =
     let label entry =
@@ -71,7 +67,7 @@ module Percentage = struct
       | Some project_id ->
         (match project_by_id project_id with
          | None -> "unknown"
-         | Some p -> P.name p)
+         | Some p -> Project.name p)
     in
     List.fold_left
       (fun m t ->
