@@ -1,18 +1,8 @@
 module Timesheet = struct
-  module IM = Map.Make (Int)
-  module SM = Map.Make (String)
   module A = Activity
   module P = Project
 
-  let projects_map =
-    List.fold_left (fun m p -> SM.add (P.name p) (P.id p) m) SM.empty
-  ;;
-
-  let activities_map =
-    List.fold_left (fun m a -> IM.add (A.id a) (A.name a) m) IM.empty
-  ;;
-
-  let project_matches project_name projects_map =
+  let project_matches project_name project_by_name =
     match project_name with
     | None -> fun _ -> true
     | Some project_name ->
@@ -21,17 +11,17 @@ module Timesheet = struct
         (match project with
          | None -> false
          | Some project_id ->
-           (match SM.find_opt project_name projects_map with
+           (match project_by_name project_name with
             | None -> false
             | Some pid -> pid == project_id))
   ;;
 
-  let fill_description activities_map entry =
+  let fill_description activity_by_id entry =
     let description =
       match Entry.description entry, Entry.activity entry with
       | Some description, Some _ -> Some description
       | Some description, None -> Some description
-      | None, Some activity_id -> IM.find_opt activity_id activities_map
+      | None, Some activity_id -> activity_by_id activity_id
       | None, None -> None
     in
     Entry.with_description entry description
@@ -42,9 +32,11 @@ module Timesheet = struct
     let* projects = R.find_projects () in
     let* activities = R.find_activities () in
     let* timesheet = R.find_timesheet begin_date end_date in
+    let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
     timesheet
-    |> List.filter (project_matches project_name @@ projects_map projects)
-    |> List.map (fill_description @@ activities_map activities)
+    |> List.filter
+         (project_matches project_name @@ RU.id_by_name (module P) projects)
+    |> List.map (fill_description @@ RU.name_by_id (module A) activities)
     |> List.rev
     |> Lwt.return_ok
   ;;
