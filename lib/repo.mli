@@ -24,22 +24,32 @@ module Cohttp (_ : Api.REQUEST_CFG) : S
 module Bi_lookup : sig
   (** Elements of {!S} have an id and a name. *)
   module type Elt_sig = sig
+    (** The type of the values we want to lookup by id/name. *)
     type t
 
+    (** [id t] is the id of [t]. *)
     val id : t -> int
+
+    (** [name t] is the name of [t]. *)
     val name : t -> string
   end
 
   (** Generic interface to convert between names and ids of elements. *)
   module type S = sig
+    (** Type of the lookup. *)
     type t
+
+    (** Type of elements being looked up. *)
     type elt
 
     (** [make es] is a bi-directional lookup between element ids and their
         names. *)
     val make : elt list -> t
 
+    (** [by_name name lookup] find some elt by its name or nothing. *)
     val by_name : string -> t -> elt option
+
+    (** [by_id id lookup] find some elt by its id or nothing. *)
     val by_id : int -> t -> elt option
   end
 
