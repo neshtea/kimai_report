@@ -13,7 +13,7 @@ module Timesheet = struct
          | Some project_id ->
            (match project_by_name project_name with
             | None -> false
-            | Some pid -> pid == project_id))
+            | Some p -> P.id p == project_id))
   ;;
 
   let fill_description activity_by_id entry =
@@ -21,7 +21,8 @@ module Timesheet = struct
       match Entry.description entry, Entry.activity entry with
       | Some description, Some _ -> Some description
       | Some description, None -> Some description
-      | None, Some activity_id -> activity_by_id activity_id
+      | None, Some activity_id ->
+        activity_by_id activity_id |> Option.map A.name
       | None, None -> None
     in
     Entry.with_description entry description
@@ -35,8 +36,8 @@ module Timesheet = struct
     let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
     timesheet
     |> List.filter
-         (project_matches project_name @@ RU.id_by_name (module P) projects)
-    |> List.map (fill_description @@ RU.name_by_id (module A) activities)
+         (project_matches project_name @@ RU.by_name (module P) projects)
+    |> List.map (fill_description @@ RU.by_id (module A) activities)
     |> List.rev
     |> Lwt.return_ok
   ;;
@@ -61,19 +62,14 @@ end
 
 module Percentage = struct
   module SM = Map.Make (String)
-  module IM = Map.Make (Int)
   module P = Project
 
-  let projects_map =
-    List.fold_left (fun m p -> IM.add (Project.id p) p m) IM.empty
-  ;;
-
-  let project_durations time_entries projects_map =
+  let project_durations time_entries project_by_id =
     let label entry =
       match Entry.project entry with
       | None -> "unknown"
       | Some project_id ->
-        (match IM.find_opt project_id projects_map with
+        (match project_by_id project_id with
          | None -> "unknown"
          | Some p -> P.name p)
     in
@@ -93,7 +89,9 @@ module Percentage = struct
     let ( let* ) = Api.bind in
     let* projects = R.find_projects () in
     let* timesheet = R.find_timesheet begin_date end_date in
-    let durations = project_durations timesheet (projects_map projects) in
+    let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
+    let project_by_id = RU.by_id (module Project) projects in
+    let durations = project_durations timesheet project_by_id in
     let overall_duration =
       SM.bindings durations |> List.fold_left (fun acc kv -> acc +. snd kv) 0.0
     in

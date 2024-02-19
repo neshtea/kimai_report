@@ -39,8 +39,8 @@ module Bi_lookup : sig
         names. *)
     val make : elt list -> t
 
-    val id_by_name : string -> t -> int option
-    val name_by_id : int -> t -> string option
+    val by_name : string -> t -> elt option
+    val by_id : int -> t -> elt option
   end
 
   (** Functor that implements {!S} for some {!Elt_sig} with an underlying
@@ -56,7 +56,7 @@ end
       let _ =
         let module R : S = ... in
         let module RU = Repo_utils (R) (Bi_lookup.Map) in
-        RU.id_by_name (module Project) 42
+        RU.by_id (module Project) 42
     ]}
     ``` *)
 module Repo_utils
@@ -64,19 +64,19 @@ module Repo_utils
     (_ : functor (E : Bi_lookup.Elt_sig) -> Bi_lookup.S with type elt = E.t) : sig
   include S
 
-  (** [id_by_name (module Elt) elems name] is some id of an element of elems
-      where each elem is an Elt, identified by it's name. *)
-  val id_by_name
+  (** [id_by_name (module Elt) elems name] is some elt of a list of elems where
+      each elem is an Elt, identified by it's name. *)
+  val by_name
     :  (module Bi_lookup.Elt_sig with type t = 'a)
     -> 'a list
     -> string
-    -> int option
+    -> 'a option
 
-  (** [name_by_id (module Elt) elems id] is some name of an element of elems
-      where each elem is an Elt, identified by it's id. *)
-  val name_by_id
+  (** [name_by_id (module Elt) elems id] is some elt from a list of elems where
+      each elem is an Elt, identified by it's id. *)
+  val by_id
     :  (module Bi_lookup.Elt_sig with type t = 'a)
     -> 'a list
     -> int
-    -> string option
+    -> 'a option
 end

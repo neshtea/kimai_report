@@ -58,8 +58,8 @@ module Bi_lookup = struct
     type elt
 
     val make : elt list -> t
-    val id_by_name : string -> t -> int option
-    val name_by_id : int -> t -> string option
+    val by_name : string -> t -> elt option
+    val by_id : int -> t -> elt option
   end
 
   module Map (E : Elt_sig) : S with type elt = E.t = struct
@@ -69,26 +69,20 @@ module Bi_lookup = struct
     type elt = E.t
 
     type t =
-      { by_name : int SM.t
-      ; by_id : string IM.t
+      { by_name : elt SM.t
+      ; by_id : elt IM.t
       }
 
     let make elements =
       { by_name =
-          List.fold_left
-            (fun m p -> SM.add (E.name p) (E.id p) m)
-            SM.empty
-            elements
+          List.fold_left (fun m p -> SM.add (E.name p) p m) SM.empty elements
       ; by_id =
-          List.fold_left
-            (fun m p -> IM.add (E.id p) (E.name p) m)
-            IM.empty
-            elements
+          List.fold_left (fun m p -> IM.add (E.id p) p m) IM.empty elements
       }
     ;;
 
-    let id_by_name name { by_name; _ } = SM.find_opt name by_name
-    let name_by_id id { by_id; _ } = IM.find_opt id by_id
+    let by_name name { by_name; _ } = SM.find_opt name by_name
+    let by_id id { by_id; _ } = IM.find_opt id by_id
   end
 end
 
@@ -100,23 +94,23 @@ module Repo_utils
 struct
   include R
 
-  let id_by_name
+  let by_name
     (type a)
     (module E : Bi_lookup.Elt_sig with type t = a)
     (things : a list)
     name
     =
     let module Container = Make_container (E) in
-    Container.make things |> Container.id_by_name name
+    Container.make things |> Container.by_name name
   ;;
 
-  let name_by_id
+  let by_id
     (type a)
     (module E : Bi_lookup.Elt_sig with type t = a)
     (things : a list)
     id
     =
     let module Container = Make_container (E) in
-    Container.make things |> Container.name_by_id id
+    Container.make things |> Container.by_id id
   ;;
 end
