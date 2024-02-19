@@ -62,13 +62,40 @@ let make_api_get_request ?(args = []) endpoint request_decoder =
   make_api_request GET endpoint args request_decoder
 ;;
 
+module Response_error = struct
+  type t =
+    | Http_error of (int * string)
+    | Json_decoder_error of Decoder.Yojson.Safe.Error.t
+
+  let show = function
+    | Http_error (status_code, body) ->
+      Printf.sprintf "HTTP status code %i: %s" status_code body
+    | Json_decoder_error err -> Decoder.Yojson.Safe.Error.show err
+  ;;
+end
+
 let ( --> ) m json_body_fn =
   let ( >>= ) = Lwt.bind in
   let ( >|= ) = Lwt.Infix.( >|= ) in
   m
-  >>= fun (_, body) ->
-  Cohttp_lwt.Body.to_string body
-  >|= fun body -> Yojson.Safe.from_string body |> json_body_fn
+  >>= fun (response, body) ->
+  let status_code = Cohttp.(Response.status response |> Code.code_of_status) in
+  let lwt_string_body = Cohttp_lwt.Body.to_string body in
+  if Cohttp.Code.is_success status_code
+  then (
+    let decoded =
+      lwt_string_body
+      >|= fun body -> Yojson.Safe.from_string body |> json_body_fn
+    in
+    decoded
+    >>= fun maybe_decoded ->
+    match maybe_decoded with
+    | Error err -> Lwt.return_error (Response_error.Json_decoder_error err)
+    | Ok ok -> Lwt.return_ok ok)
+  else
+    lwt_string_body
+    >>= fun body ->
+    Lwt.return_error (Response_error.Http_error (status_code, body))
 ;;
 
 let run_request (module RC : REQUEST_CFG) = function

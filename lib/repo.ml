@@ -5,7 +5,7 @@ let or_error_string m =
   let ( >>= ) = Lwt.bind in
   m
   >>= function
-  | Error err -> Decoder.Yojson.Safe.Error.show err |> Lwt.return_error
+  | Error err -> Api.Response_error.show err |> Lwt.return_error
   | Ok projects -> Lwt.return_ok projects
 ;;
 
