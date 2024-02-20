@@ -4,6 +4,32 @@ module View = struct
   module H = Dream_html.HTML
   module Hx = Dream_html.Hx
 
+  let labelled_input ?(input_value = None) label input_id input_type =
+    [ H.label [ H.for_ "%s" input_id ] [ D.txt "%s" label ]
+    ; H.input
+        ((match input_value with
+          | None -> []
+          | Some v -> [ H.value "%s" v ])
+         @ [ H.type_ input_type; H.id "%s" input_id; H.name "%s" input_id ])
+    ]
+  ;;
+
+  let form method_ action result_target result_swap inputs =
+    H.form
+      [ H.method_ method_
+      ; H.action action
+      ; (match method_ with
+         | `GET -> Hx.get action
+         | `POST -> Hx.post action)
+      ; Hx.target result_target
+      ; Hx.swap
+          (match result_swap with
+           | `Inner_html -> "innerHTML"
+           | `Outer_html -> "outerHTML")
+      ]
+      inputs
+  ;;
+
   let timesheets_report_form () =
     let start_of_month, today =
       ( Date.start_of_month () |> Date.to_html5_string ~with_clock:false
@@ -12,29 +38,23 @@ module View = struct
     H.section
       []
       [ H.h2 [] [ D.txt "Timesheets Report" ]
-      ; H.form
-          [ H.method_ `GET
-          ; H.action "/timesheets"
-          ; Hx.get "/timesheets"
-          ; Hx.target "#timesheets_report_table"
-          ; Hx.swap "outerHTML"
-          ]
-          [ H.label [ H.for_ "begin" ] [ D.txt "Begin" ]
-          ; H.input
-              [ H.id "begin"
-              ; H.name "begin"
-              ; H.type_ "date"
-              ; H.value "%s" start_of_month
-              ]
-          ; H.label [ H.for_ "end" ] [ D.txt "End" ]
-          ; H.input
-              [ H.id "end"; H.name "end"; H.type_ "date"; H.value "%s" today ]
-          ; H.label [ H.for_ "project" ] [ D.txt "Project" ]
-          ; H.input [ H.id "project"; H.name "project"; H.type_ "text" ]
-          ; H.button [ H.type_ "submit" ] [ D.txt "Run" ]
-          ]
+      ; form `GET "/timesheets" "#timesheets_report_table" `Outer_html
+        @@ List.concat
+             [ labelled_input
+                 "Begin"
+                 "begin"
+                 "date"
+                 ~input_value:(Some start_of_month)
+             ; labelled_input "End" "end" "date" ~input_value:(Some today)
+             ; labelled_input "Project" "project" "text"
+             ]
+        @ [ H.button [ H.type_ "submit" ] [ D.txt "Run" ] ]
       ]
   ;;
+
+  let th txt = H.th [] [ D.txt "%s" txt ]
+  let tr tds = H.tr [] tds
+  let td txt = H.td [] [ D.txt "%s" txt ]
 
   let timesheets_report_table report =
     H.div
@@ -46,33 +66,18 @@ module View = struct
           ]
       ; H.table
           []
-          [ H.thead
-              []
-              [ H.th [] [ D.txt "Date" ]
-              ; H.th [] [ D.txt "Hours" ]
-              ; H.th [] [ D.txt "Description" ]
-              ]
+          [ H.thead [] [ th "Date"; th "Hours"; th "Description" ]
           ; H.body
               []
               (List.map
                  (fun entry ->
-                   H.tr
-                     []
-                     [ H.td
-                         []
-                         [ D.txt
-                             "%s"
-                             (Entry.date entry
-                              |> Date.of_ptime
-                              |> Date.to_html5_string ~with_clock:false)
-                         ]
-                     ; H.td [] [ D.txt "%f" @@ Entry.duration entry ]
-                     ; H.td
-                         []
-                         [ D.txt "%s"
-                           @@ Option.value ~default:""
-                           @@ Entry.description entry
-                         ]
+                   tr
+                     [ td
+                         (Entry.date entry
+                          |> Date.of_ptime
+                          |> Date.to_html5_string ~with_clock:false)
+                     ; td @@ string_of_float @@ Entry.duration entry
+                     ; td @@ Option.value ~default:"" @@ Entry.description entry
                      ])
                  report)
           ]
@@ -87,25 +92,20 @@ module View = struct
     H.section
       []
       [ H.h2 [] [ D.txt "Percentage Report" ]
-      ; H.form
-          [ H.method_ `GET
-          ; H.action "/percentage"
-          ; Hx.get "/percentage"
-          ; Hx.target "#percentage_report_table"
-          ; Hx.swap "outerHTML"
-          ]
-          [ H.label [ H.for_ "begin" ] [ D.txt "Begin" ]
-          ; H.input
-              [ H.id "begin"
-              ; H.name "begin"
-              ; H.type_ "date"
-              ; H.value "%s" start_of_month
-              ]
-          ; H.label [ H.for_ "end" ] [ D.txt "End" ]
-          ; H.input
-              [ H.id "end"; H.name "end"; H.type_ "date"; H.value "%s" today ]
-          ; H.button [ H.type_ "submit" ] [ D.txt "Run" ]
-          ]
+      ; form
+          `GET
+          "/percentage"
+          "#percentage_report_table"
+          `Outer_html
+          (List.concat
+             [ labelled_input
+                 ~input_value:(Some start_of_month)
+                 "Begin"
+                 "begin"
+                 "date"
+             ; labelled_input ~input_value:(Some today) "End" "end" "date"
+             ]
+           @ [ H.button [ H.type_ "submit" ] [ D.txt "Run" ] ])
       ]
   ;;
 
@@ -114,21 +114,20 @@ module View = struct
       [ H.id "percentage_report_table" ]
       [ H.thead
           []
-          [ H.th [] [ D.txt "Project Name" ]
-          ; H.th [] [ D.txt "Overall Hours" ]
-          ; H.th [] [ D.txt "Percentage (exact)" ]
-          ; H.th [] [ D.txt "Percentage (rounded)" ]
+          [ th "Project Name"
+          ; th "Overall Hours"
+          ; th "Percentage (exact)"
+          ; th "Percentage (rounded)"
           ]
       ; H.body
           []
           (List.map
              (fun (project_name, (overall_hours, percentage, percentage_rounded)) ->
-               H.tr
-                 []
-                 [ H.td [] [ D.txt "%s" project_name ]
-                 ; H.td [] [ D.txt "%i" overall_hours ]
-                 ; H.td [] [ D.txt "%f" percentage ]
-                 ; H.td [] [ D.txt "%i" percentage_rounded ]
+               tr
+                 [ td project_name
+                 ; td @@ string_of_int overall_hours
+                 ; td @@ string_of_float percentage
+                 ; td @@ string_of_int percentage_rounded
                  ])
              report)
       ]
