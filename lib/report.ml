@@ -30,7 +30,7 @@ module Timesheet = struct
     let* projects = R.find_projects () in
     let* activities = R.find_activities () in
     let* timesheet = R.find_timesheet begin_date end_date in
-    let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
+    let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Hash) in
     timesheet
     |> List.filter
          (project_matches project_name @@ RU.by_name (module Project) projects)
@@ -85,7 +85,7 @@ module Percentage = struct
     let ( let* ) = Api.bind in
     let* projects = R.find_projects () in
     let* timesheet = R.find_timesheet begin_date end_date in
-    let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
+    let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Hash) in
     let project_by_id = RU.by_id (module Project) projects in
     let durations = project_durations timesheet project_by_id in
     let overall_duration =

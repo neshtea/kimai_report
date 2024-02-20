@@ -56,6 +56,10 @@ module Bi_lookup : sig
   (** Functor that implements {!S} for some {!Elt_sig} with an underlying
       map. *)
   module Map (E : Elt_sig) : S with type elt = E.t
+
+  (** Functor that implements {!S} for some {!Elt_sig} with an underlying
+      {!Hashtbl.t}. *)
+  module Hash (E : Elt_sig) : S with type elt = E.t
 end
 
 (** Functor that provides common utilities for things in a repo of type
