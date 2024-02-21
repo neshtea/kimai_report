@@ -24,6 +24,15 @@ val make_request_args : (string * string) list -> request_args
     side-effects. *)
 type 'a api_request
 
+(** An [response_error] is a failed response of a certain type. *)
+module Response_error : sig
+  type t =
+    | Http_error of (int * string)
+    | Json_decoder_error of Decoder.Yojson.Safe.Error.t
+
+  val show : t -> string
+end
+
 (** [make_api_get_request ~args endpoint decoder] is a new {!api_request}
     against the provided [endpoint] unsing the HTTP-GET method. It decodes the
     result using the provided [decoder]. Additional [~args] may be provided
@@ -35,13 +44,25 @@ val make_api_get_request
   -> 'a Decoder.Yojson.Safe.decoder
   -> 'a api_request
 
+(** [make_api_post_request ~args endpoint body decoder] is a new {!api_request}
+    against the provided [endpoint] unsing the HTTP-POST method with provided
+    [body]. It decodes the result using the provided [decoder]. Additional
+    [~args] may be provided which will be added as parameters to the
+    request. The request must be run via {!run_request}. *)
+val make_api_post_request
+  :  ?args:(string * string) list
+  -> string
+  -> string
+  -> 'a Decoder.Yojson.Safe.decoder
+  -> 'a api_request
+
 (** [run_request (module Rc) req] actually runs the request [req], using the
     provided credentials in the request config [Rc].  The result is either a
     value of type [a] or a decoder error, wrapped in a {!Lwt.t} result. *)
 val run_request
   :  (module REQUEST_CFG)
   -> 'a api_request
-  -> ('a, Decoder.Yojson.Safe.Error.t) result Lwt.t
+  -> ('a, Response_error.t) result Lwt.t
 
 (** [return x] is the value [x] lifted into the {!Result.t} monad, wrapped into
     the {!Lwt.t} monad. *)
