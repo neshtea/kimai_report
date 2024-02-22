@@ -17,15 +17,15 @@ let decoder =
 ;;
 
 let encoder name =
-  let activity =
+  let customer =
     `Assoc
       [ "name", `String name
-      ; "project", `Null
-      ; "comment", `Null
-      ; "teams", `List []
+      ; "currency", `String "EUR"
+      ; "country", `String "DE"
+      ; "timezone", `String "Europe/Berlin"
       ; "visible", `Bool true
       ; "billable", `Bool true
       ]
   in
-  Encoder.Yojson.Encoder.to_string activity
+  Encoder.Yojson.Encoder.to_string customer
 ;;

@@ -5,18 +5,30 @@ type 'a or_error = ('a, string) result Lwt.t
 (** A repo, defined by a module implementing {!S}, serves as a source for
     generating reports. *)
 module type S = sig
+  (** [find_customers ()] is a list of all {!Customer.t} or an error. *)
+  val find_customers : unit -> Customer.t list or_error
+
+  (** [add_customer name] adds a customer and returns true or an error. *)
+  val add_customer : string -> bool or_error
+
   (** [find_projects ()] is a list of all {!Project.t} or an error. *)
   val find_projects : unit -> Project.t list or_error
 
-  (** [add_project name] adds a project and returns true or an error. *)
-  val add_project: string -> int -> bool or_error
+  (** [add_project name client-id] adds a project and returns true or an error. *)
+  val add_project : string -> int -> bool or_error
 
   (** [find_activities ()] is a list of all {!Activity.t} or an error. *)
   val find_activities : unit -> Activity.t list or_error
 
+  (** [add_activity name] adds an activity and returns true or an error. *)
+  val add_activity : string -> bool or_error
+
   (** [find_timesheet begin_date end_date] is a list of all {!Entry.t} or an
       error between the [begin_date] and [end_date], inclusively. *)
   val find_timesheet : Date.t -> Date.t -> Entry.t list or_error
+
+  (** adds an timesheet record *)
+  val add_timesheet : string -> string -> int -> int -> string -> bool or_error
 end
 
 (** Implementation of a repo that, given a {!Api.REQUEST_CFG}, talks directly to

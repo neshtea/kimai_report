@@ -1,5 +1,5 @@
 type 'a or_error = ('a, string) result Lwt.t
-(* not sure if I wan to have the Lwt async in the signature. *)
+(* not sure if I want to have the Lwt async in the signature. *)
 
 let or_error_string m =
   let ( >>= ) = Lwt.bind in
@@ -10,10 +10,14 @@ let or_error_string m =
 ;;
 
 module type S = sig
+  val find_customers : unit -> Customer.t list or_error
+  val add_customer : string -> bool or_error
   val find_projects : unit -> Project.t list or_error
   val add_project : string -> int -> bool or_error
   val find_activities : unit -> Activity.t list or_error
+  val add_activity : string -> bool or_error
   val find_timesheet : Date.t -> Date.t -> Entry.t list or_error
+  val add_timesheet : string -> string -> int -> int -> string -> bool or_error
 end
 
 module Cohttp (RC : Api.REQUEST_CFG) : S = struct
@@ -21,6 +25,16 @@ module Cohttp (RC : Api.REQUEST_CFG) : S = struct
 
   let run api_request =
     Api.run_request (module RC) api_request |> or_error_string
+  ;;
+
+  let find_customers () =
+    D.list Customer.decoder |> Api.make_api_get_request "/customers" |> run
+  ;;
+
+  let add_customer name =
+    D.return true
+    |> Api.make_api_post_request "/customers" (Customer.encoder name)
+    |> run
   ;;
 
   let find_projects () =
@@ -37,6 +51,12 @@ module Cohttp (RC : Api.REQUEST_CFG) : S = struct
     D.list Activity.decoder |> Api.make_api_get_request "/activities" |> run
   ;;
 
+  let add_activity name =
+    D.return true
+    |> Api.make_api_post_request "/activities" (Activity.encoder name)
+    |> run
+  ;;
+
   let find_timesheet begin_date end_date =
     D.list Entry.decoder
     |> Api.make_api_get_request
@@ -48,6 +68,19 @@ module Cohttp (RC : Api.REQUEST_CFG) : S = struct
                 particular range, but the default (NULL) is too low. *)
            ]
          "/timesheets"
+    |> run
+  ;;
+
+  let add_timesheet begin_date_time end_date_time project activity description =
+    D.return true
+    |> Api.make_api_post_request
+         "/timesheets"
+         (Entry.encoder
+            begin_date_time
+            end_date_time
+            project
+            activity
+            description)
     |> run
   ;;
 end

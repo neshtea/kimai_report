@@ -33,3 +33,16 @@ let decoder =
   let* project = D.optional @@ D.field "project" D.int in
   D.return { date; duration; activity; description; project }
 ;;
+
+let encoder begin_date_time end_date_time project activity description =
+  let entry =
+    `Assoc
+      [ "begin", `String begin_date_time
+      ; "end", `String end_date_time
+      ; "project", `Int project
+      ; "activity", `Int activity
+      ; "description", `String description
+      ]
+  in
+  Encoder.Yojson.Encoder.to_string entry
+;;
