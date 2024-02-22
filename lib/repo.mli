@@ -93,7 +93,7 @@ module Repo_utils
     (_ : functor (E : Bi_lookup.Elt_sig) -> Bi_lookup.S with type elt = E.t) : sig
   include S
 
-  (** [id_by_name (module Elt) elems name] is some elt of a list of elems where
+  (** [by_name (module Elt) elems name] is some elt of a list of elems where
       each elem is an Elt, identified by it's name. *)
   val by_name
     :  (module Bi_lookup.Elt_sig with type t = 'a)
@@ -101,11 +101,27 @@ module Repo_utils
     -> string
     -> 'a option
 
-  (** [name_by_id (module Elt) elems id] is some elt from a list of elems where
+  (** [id_by_name (module Elt) elems name] is some elt id of a list of elems where
+      each elem is an Elt, identified by it's name. *)
+  val id_by_name
+    :  (module Bi_lookup.Elt_sig with type t = 'a)
+    -> 'a list
+    -> string
+    -> int option
+
+  (** [by_id (module Elt) elems id] is some elt from a list of elems where
       each elem is an Elt, identified by it's id. *)
   val by_id
     :  (module Bi_lookup.Elt_sig with type t = 'a)
     -> 'a list
     -> int
     -> 'a option
+
+  (** [name_by_id (module Elt) elems id] is some elt name from a list of elems where
+      each elem is an Elt, identified by it's id. *)
+  val name_by_id
+    :  (module Bi_lookup.Elt_sig with type t = 'a)
+    -> 'a list
+    -> int
+    -> string option
 end

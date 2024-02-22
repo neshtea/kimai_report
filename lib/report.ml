@@ -1,5 +1,5 @@
 module Timesheet = struct
-  let project_matches project_name project_by_name =
+  let project_matches project_name id_by_name =
     match project_name with
     | None -> fun _ -> true
     | Some project_name ->
@@ -8,9 +8,9 @@ module Timesheet = struct
         (match project with
          | None -> false
          | Some project_id ->
-           (match project_by_name project_name with
+           (match id_by_name project_name with
             | None -> false
-            | Some p -> Project.id p == project_id))
+            | Some p -> p == project_id))
   ;;
 
   let fill_description activity_by_id entry =
@@ -33,7 +33,8 @@ module Timesheet = struct
     let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Hash) in
     timesheet
     |> List.filter
-         (project_matches project_name @@ RU.by_name (module Project) projects)
+         (project_matches project_name
+          @@ RU.id_by_name (module Project) projects)
     |> List.map (fill_description @@ RU.by_id (module Activity) activities)
     |> List.rev
     |> Lwt.return_ok

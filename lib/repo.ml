@@ -169,6 +169,17 @@ struct
     Container.make things |> Container.by_name name
   ;;
 
+  let id_by_name
+    (type a)
+    (module E : Bi_lookup.Elt_sig with type t = a)
+    (things : a list)
+    name
+    =
+    match by_name (module E) things name with
+    | Some thing -> Some (E.id thing)
+    | None -> None
+  ;;
+
   let by_id
     (type a)
     (module E : Bi_lookup.Elt_sig with type t = a)
@@ -177,5 +188,16 @@ struct
     =
     let module Container = Make_container (E) in
     Container.make things |> Container.by_id id
+  ;;
+
+  let name_by_id
+    (type a)
+    (module E : Bi_lookup.Elt_sig with type t = a)
+    (things : a list)
+    id
+    =
+    match by_id (module E) things id with
+    | Some thing -> Some (E.name thing)
+    | None -> None
   ;;
 end
