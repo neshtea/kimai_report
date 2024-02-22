@@ -8,6 +8,9 @@ module type S = sig
   (** [find_projects ()] is a list of all {!Project.t} or an error. *)
   val find_projects : unit -> Project.t list or_error
 
+  (** [add_project name] adds a project and returns true or an error. *)
+  val add_project: string -> int -> bool or_error
+
   (** [find_activities ()] is a list of all {!Activity.t} or an error. *)
   val find_activities : unit -> Activity.t list or_error
 

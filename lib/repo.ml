@@ -11,6 +11,7 @@ let or_error_string m =
 
 module type S = sig
   val find_projects : unit -> Project.t list or_error
+  val add_project : string -> int -> bool or_error
   val find_activities : unit -> Activity.t list or_error
   val find_timesheet : Date.t -> Date.t -> Entry.t list or_error
 end
@@ -24,6 +25,12 @@ module Cohttp (RC : Api.REQUEST_CFG) : S = struct
 
   let find_projects () =
     D.list Project.decoder |> Api.make_api_get_request "/projects" |> run
+  ;;
+
+  let add_project name client_id =
+    D.return true
+    |> Api.make_api_post_request "/projects" (Project.encoder name client_id)
+    |> run
   ;;
 
   let find_activities () =
