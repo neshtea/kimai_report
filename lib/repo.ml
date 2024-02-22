@@ -86,8 +86,6 @@ module Bi_lookup = struct
   end
 
   module Hash (E : Elt_sig) : S with type elt = E.t = struct
-    let hash = Hashtbl.create 30
-
     type elt = E.t
 
     type t =
