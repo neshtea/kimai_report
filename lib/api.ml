@@ -42,9 +42,7 @@ let request_headers api_user api_pwd =
 ;;
 
 type 'a body_decoder = 'a Decoder.Yojson.Safe.decoder
-
-(* FIXME *)
-type body_encoder = string
+type body_encoder = Encoder.Yojson.Encoder.encoder
 
 type 'a request_method =
   | Get of 'a body_decoder
@@ -106,6 +104,8 @@ let ( --> ) m json_body_fn =
     Lwt.return_error (Response_error.Http_error (status_code, body))
 ;;
 
+let encode_body body_encoder = Cohttp_lwt.Body.of_string (body_encoder ())
+
 let run_request (module RC : REQUEST_CFG) = function
   | Api_request (request_method, endpoint, args) ->
     let headers = request_headers RC.api_user RC.api_pwd in
@@ -118,8 +118,8 @@ let run_request (module RC : REQUEST_CFG) = function
     (match request_method with
      | Get body_decoder -> C.get ~headers uri --> body_decoder
      | Post (body_encoder, body_decoder) ->
-       C.post ~body:(Cohttp_lwt.Body.of_string body_encoder) ~headers uri
-       --> body_decoder)
+       let body = encode_body body_encoder in
+       C.post ~body ~headers uri --> body_decoder)
 ;;
 
 let return x = Lwt.return_ok x

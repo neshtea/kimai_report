@@ -14,3 +14,12 @@ end
 
 module Yojson_safe : S with type t = Yojson.Safe.t
 module Yojson_basic : S with type t = Yojson.Basic.t
+
+module type E = sig
+  type t
+
+  val to_string : t -> string
+  val show : t -> string
+end
+
+module Yojson_encode : E with type t = Yojson.Basic.t

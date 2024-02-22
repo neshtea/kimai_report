@@ -83,3 +83,17 @@ module Yojson_basic : S with type t = Yojson.Basic.t = struct
     | json -> Some json
   ;;
 end
+
+module type E = sig
+  type t
+
+  val to_string : t -> string
+  val show : t -> string
+end
+
+module Yojson_encode : E with type t = Yojson.Basic.t = struct
+  type t = Yojson.Basic.t
+
+  let to_string t = Yojson.Basic.to_string t
+  let show t = Yojson.Basic.show t
+end
