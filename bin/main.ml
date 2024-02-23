@@ -41,6 +41,32 @@ let percentage api_url api_user api_pwd begin_date end_date =
   | Ok percentages -> K.Report.Percentage.print_csv percentages
 ;;
 
+let record
+  api_url
+  api_user
+  api_pwd
+  begin_date_time
+  end_date_time
+  project_name
+  activity_name
+  description
+  =
+  let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
+  let module R = K.Repo.Cohttp (RC) in
+  match
+    K.Record.Record.exec
+      (module R)
+      begin_date_time
+      end_date_time
+      project_name
+      activity_name
+      description
+    |> Lwt_main.run
+  with
+  | Error err -> print_endline @@ "Error:" ^ err
+  | Ok _result -> ()
+;;
+
 let api_url =
   let doc = "The base url of the API endpoint you want to talk to." in
   C.Arg.(value @@ pos 0 string "" @@ info [] ~docv:"API_URL" ~doc)
@@ -137,14 +163,60 @@ let server_cmd =
   C.Cmd.v info server_t
 ;;
 
+let record_begin_date_time =
+  let doc =
+    "The begin date and time of the entry. Format is `YYYY-mm-DD HH:MM:SS`."
+  in
+  C.Arg.(required @@ opt (some string) None @@ info [ "begin" ] ~doc)
+;;
+
+let record_end_date_time =
+  let doc =
+    "The end date and time of the entry. Format is `YYYY-mm-DD HH:MM:SS`."
+  in
+  C.Arg.(required @@ opt (some string) None @@ info [ "end" ] ~doc)
+;;
+
+let record_project_name =
+  let doc = "Name of the project the entry is recorded to." in
+  C.Arg.(required @@ opt (some string) None @@ info [ "project" ] ~doc)
+;;
+
+let record_activity_name =
+  let doc = "Name of the activity of the entry." in
+  C.Arg.(required @@ opt (some string) None @@ info [ "activity" ] ~doc)
+;;
+
+let record_description =
+  let doc = "Description of the entry." in
+  C.Arg.(required @@ opt (some string) None @@ info [ "description" ] ~doc)
+;;
+
+let record_t =
+  C.Term.(
+    const record
+    $ api_url
+    $ api_user
+    $ api_pwd
+    $ record_begin_date_time
+    $ record_end_date_time
+    $ record_project_name
+    $ record_activity_name
+    $ record_description)
+;;
+
+let record_cmd =
+  let info = C.Cmd.info "record" in
+  C.Cmd.v info record_t
+;;
+
 let main_cmd =
   let doc =
     "generate controlling information for internal controlling from a kimai \
      instance"
   in
   let info = C.Cmd.info "kimai_report" ~doc in
-  let default = timesheet_t in
-  C.Cmd.group info ~default [ timesheet_cmd; percentage_cmd; server_cmd ]
+  C.Cmd.group info [ timesheet_cmd; percentage_cmd; server_cmd; record_cmd ]
 ;;
 
 let main () = exit (C.Cmd.eval main_cmd)
