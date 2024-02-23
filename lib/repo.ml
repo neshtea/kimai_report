@@ -139,10 +139,10 @@ module Bi_lookup = struct
       let by_id = Hashtbl.create len in
       List.map (fun elt -> E.name elt, elt) elements
       |> List.to_seq
-      |> Hashtbl.add_seq (Hashtbl.create len);
+      |> Hashtbl.add_seq by_name;
       List.map (fun elt -> E.id elt, elt) elements
       |> List.to_seq
-      |> Hashtbl.add_seq (Hashtbl.create len);
+      |> Hashtbl.add_seq by_id;
       { by_name; by_id }
     ;;
 
