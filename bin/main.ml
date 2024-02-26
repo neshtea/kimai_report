@@ -15,6 +15,7 @@ let timesheet
   end_date
   project_name
   include_overall_duration
+  emit_column_headers_opt
   =
   let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
   let module R = K.Repo.Cohttp (RC) in
@@ -24,7 +25,10 @@ let timesheet
   with
   | Error err -> print_endline @@ "Error:" ^ err
   | Ok timesheet ->
-    let () = K.Report.Timesheet.print_csv timesheet in
+    let emit_column_headers =
+      Option.value emit_column_headers_opt ~default:false
+    in
+    let () = K.Report.Timesheet.print_csv emit_column_headers timesheet in
     let show_duration = Option.value include_overall_duration ~default:false in
     if show_duration
     then K.Report.Timesheet.print_overall_duration timesheet
@@ -97,6 +101,11 @@ let show_overall_duration =
   C.Arg.(value @@ opt (some bool) None @@ info [ "show_duration" ] ~doc)
 ;;
 
+let emit_column_headers =
+  let doc = "Whether or not to emit the headers of the generated timesheet." in
+  C.Arg.(value @@ opt (some bool) None @@ info [ "emit_column_headers" ] ~doc)
+;;
+
 let date =
   let parse s =
     try K.Date.from_string_exn s |> Result.ok with
@@ -133,7 +142,8 @@ let timesheet_t =
     $ begin_date
     $ end_date
     $ project_name
-    $ show_overall_duration)
+    $ show_overall_duration
+    $ emit_column_headers)
 ;;
 
 let timesheet_cmd =

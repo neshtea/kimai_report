@@ -10,7 +10,7 @@ module Timesheet : sig
     -> Entry.t list Repo.or_error
 
   (** [print_csv pairs] prints all timesheet entries to stdout. *)
-  val print_csv : Entry.t list -> unit
+  val print_csv : bool -> Entry.t list -> unit
 
   (** [overall_duration pairs] calculates the overall duration of the calculated
       timesheet. *)

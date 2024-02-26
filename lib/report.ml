@@ -40,7 +40,9 @@ module Timesheet = struct
     |> Lwt.return_ok
   ;;
 
-  let print_csv =
+  let print_csv emit_column_headers =
+    if emit_column_headers
+    then Printf.printf "\"Date\",\"Duration\",\"Description\"\n";
     List.iter (fun entry ->
       Printf.printf
         "%s,%f,\"%s\"\n"
