@@ -61,8 +61,8 @@ module Cohttp (RC : Api.REQUEST_CFG) : S = struct
     D.list Entry.decoder
     |> Api.make_api_get_request
          ~args:
-           [ "begin", Date.to_html5_string begin_date
-           ; "end", Date.to_html5_string end_date
+           [ "begin", Date.to_html5_start_of_day_string begin_date
+           ; "end", Date.to_html5_end_of_day_string end_date
            ]
          "/timesheets"
     |> run

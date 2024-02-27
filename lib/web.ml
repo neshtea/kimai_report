@@ -32,8 +32,8 @@ module View = struct
 
   let timesheets_report_form () =
     let start_of_month, today =
-      ( Date.start_of_month () |> Date.to_html5_string ~with_clock:false
-      , Date.today () |> Date.to_html5_string ~with_clock:false )
+      ( Date.start_of_month () |> Date.to_html5_string
+      , Date.today () |> Date.to_html5_string )
     in
     H.section
       []
@@ -75,7 +75,7 @@ module View = struct
                      [ td
                          (Entry.date entry
                           |> Date.of_ptime
-                          |> Date.to_html5_string ~with_clock:false)
+                          |> Date.to_html5_string)
                      ; td @@ string_of_float @@ Entry.duration entry
                      ; td @@ Option.value ~default:"" @@ Entry.description entry
                      ])
@@ -86,8 +86,8 @@ module View = struct
 
   let percentage_report_form () =
     let start_of_month, today =
-      ( Date.start_of_month () |> Date.to_html5_string ~with_clock:false
-      , Date.today () |> Date.to_html5_string ~with_clock:false )
+      ( Date.start_of_month () |> Date.to_html5_string
+      , Date.today () |> Date.to_html5_string )
     in
     H.section
       []

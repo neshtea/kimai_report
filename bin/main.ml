@@ -109,11 +109,12 @@ let emit_column_headers =
 let date =
   let parse s =
     try K.Date.from_string_exn s |> Result.ok with
-    | K.Date.Date_format_error s -> Error (`Msg s)
+    | K.Date.Date_format_error s ->
+      Error (`Msg (Printf.sprintf "%s is not a valid date" s))
   in
-  let str = Printf.sprintf in
-  let err_str s = str "+%s" (K.Date.to_html5_string s) in
-  let print ppf p = Format.fprintf ppf "%s" (err_str p) in
+  let print ppf s =
+    Format.fprintf ppf "%s" (Printf.sprintf "+%s" (K.Date.to_html5_string s))
+  in
   C.Arg.conv ~docv:"FROM" (parse, print)
 ;;
 

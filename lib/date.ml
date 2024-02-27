@@ -21,15 +21,19 @@ let from_string_exn date_string =
   | _ -> raise @@ Date_format_error date_string
 ;;
 
-let to_html5_string ?(with_clock = true) { year; month; day } =
+let to_html5_string { year; month; day } =
   (* SEE
      https://github.com/kimai/kimai/blob/main/src/API/TimesheetController.php#L89
      for the weird formatting *)
-  Printf.sprintf
-    (if with_clock then "%04d-%02d-%02dT23:59:59" else "%04d-%02d-%02d")
-    year
-    month
-    day
+  Printf.sprintf "%04d-%02d-%02d" year month day
+;;
+
+let to_html5_start_of_day_string { year; month; day } =
+  Printf.sprintf "%04d-%02d-%02dT00:00:00" year month day
+;;
+
+let to_html5_end_of_day_string { year; month; day } =
+  Printf.sprintf "%04d-%02d-%02dT23:59:59" year month day
 ;;
 
 let of_ptime pt =
