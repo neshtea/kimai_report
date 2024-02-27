@@ -181,13 +181,17 @@ module Route = struct
   let handle_get_timesheets (module R : Repo.S) req =
     let begin_ = Dream.query req "begin" in
     let end_ = Dream.query req "end" in
-    let project_name = Dream.query req "project" in
+    let project_names =
+      match Dream.query req "project" with
+      | Some project_name -> [ project_name ]
+      | None -> []
+    in
     let* lwt_report =
       Report.Timesheet.exec
         (module R)
         (begin_date begin_)
         (end_date end_)
-        ~project_name
+        ~project_names
     in
     match lwt_report with
     | Ok report ->

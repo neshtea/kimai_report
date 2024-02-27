@@ -13,14 +13,14 @@ let timesheet
   api_pwd
   begin_date
   end_date
-  project_name
+  project_names
   include_overall_duration
   emit_column_headers_opt
   =
   let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
   let module R = K.Repo.Cohttp (RC) in
   match
-    K.Report.Timesheet.exec ~project_name (module R) begin_date end_date
+    K.Report.Timesheet.exec ~project_names (module R) begin_date end_date
     |> Lwt_main.run
   with
   | Error err -> print_endline @@ "Error:" ^ err
@@ -86,12 +86,12 @@ let api_pwd =
   C.Arg.(value @@ pos 2 string "" @@ info [] ~docv:"API_PWD" ~doc)
 ;;
 
-let project_name =
+let project_names =
   let doc =
     "Name of the project the timesheet is generated for. If not given, exports \
-     all projects."
+     all projects. If given more than once, exports all the given projects."
   in
-  C.Arg.(value @@ opt (some string) None @@ info [ "project" ] ~doc)
+  C.Arg.(value @@ opt_all string [] @@ info [ "project" ] ~doc)
 ;;
 
 let show_overall_duration =
@@ -141,7 +141,7 @@ let timesheet_t =
     $ api_pwd
     $ begin_date
     $ end_date
-    $ project_name
+    $ project_names
     $ show_overall_duration
     $ emit_column_headers)
 ;;

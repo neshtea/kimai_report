@@ -1,16 +1,13 @@
 module Timesheet = struct
-  let project_matches project_name id_by_name =
-    match project_name with
-    | None -> fun _ -> true
-    | Some project_name ->
+  let projects_matches project_ids =
+    if [] == project_ids
+    then fun _ -> true
+    else
       fun entry ->
-        let project = Entry.project entry in
-        (match project with
-         | None -> false
-         | Some project_id ->
-           (match id_by_name project_name with
-            | None -> false
-            | Some p -> p == project_id))
+      let project = Entry.project entry in
+      match project with
+      | None -> false
+      | Some project_id -> List.mem project_id project_ids
   ;;
 
   let fill_description activity_by_id entry =
@@ -25,19 +22,34 @@ module Timesheet = struct
     Entry.with_description entry description
   ;;
 
-  let exec ?(project_name = None) (module R : Repo.S) begin_date end_date =
+  let exec ?(project_names = []) (module R : Repo.S) begin_date end_date =
     let ( let* ) = Api.bind in
     let* projects = R.find_projects () in
     let* activities = R.find_activities () in
-    let* timesheet = R.find_timesheet begin_date end_date in
     let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Hash) in
-    timesheet
-    |> List.filter
-         (project_matches project_name
-          @@ RU.id_by_name (module Project) projects)
-    |> List.map (fill_description @@ RU.by_id (module Activity) activities)
-    |> List.rev
-    |> Lwt.return_ok
+    let id_by_name = RU.id_by_name (module Project) projects in
+    let some_project_ids, none_project_names =
+      List.fold_left
+        (fun (some_project_ids, none_project_names) project_name ->
+          match id_by_name project_name with
+          | Some id -> id :: some_project_ids, none_project_names
+          | None -> some_project_ids, project_name :: none_project_names)
+        ([], [])
+        project_names
+    in
+    if [] == none_project_names
+    then
+      let* timesheet = R.find_timesheet begin_date end_date in
+      timesheet
+      |> List.filter (projects_matches some_project_ids)
+      |> List.map (fill_description @@ RU.by_id (module Activity) activities)
+      |> List.rev
+      |> Lwt.return_ok
+    else
+      Lwt.return_error
+      @@ Printf.sprintf
+           "projects [ %s ] do not exist"
+           (String.concat ", " none_project_names)
   ;;
 
   let print_csv emit_column_headers =
