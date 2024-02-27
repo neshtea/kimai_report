@@ -45,14 +45,34 @@ module Timesheet = struct
     let ( let* ) = Api.bind in
     let* projects = R.find_projects () in
     let* activities = R.find_activities () in
-    let* timesheet = R.find_timesheet begin_date end_date in
     let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
-    timesheet
-    |> List.filter
-         (project_matches project_name @@ RU.by_name (module Project) projects)
-    |> List.map (fill_description @@ RU.by_id (module Activity) activities)
-    |> List.rev
-    |> Lwt.return_ok
+    let id_by_name = RU.id_by_name (module Project) projects in
+    let some_project_ids, none_project_names =
+      List.fold_left
+        (fun (some_project_ids, none_project_names) project_name ->
+          match id_by_name project_name with
+          | Some id -> id :: some_project_ids, none_project_names
+          | None -> some_project_ids, project_name :: none_project_names)
+        ([], [])
+        project_names
+    in
+    if [] == none_project_names
+    then
+      let* timesheet = R.find_timesheet begin_date end_date in
+      timesheet
+      |> List.filter (projects_matches some_project_ids)
+      |> List.map
+           (fill_description
+              ~prepend_project_name:([] != some_project_ids)
+              (RU.name_by_id (module Activity) activities)
+              (RU.name_by_id (module Project) projects))
+      |> List.rev
+      |> Lwt.return_ok
+    else
+      Lwt.return_error
+      @@ Printf.sprintf
+           "Projects do not exist: [%s]"
+           (String.concat ", " none_project_names)
   ;;
 
   let print_csv emit_column_headers =
