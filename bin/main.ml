@@ -159,7 +159,8 @@ let timesheet_t =
 ;;
 
 let timesheet_cmd =
-  let info = C.Cmd.info "timesheet" in
+  let doc = "Generate a timesheet." in
+  let info = C.Cmd.info "timesheet" ~doc in
   C.Cmd.v info timesheet_t
 ;;
 
@@ -169,7 +170,8 @@ let percentage_t =
 ;;
 
 let percentage_cmd =
-  let info = C.Cmd.info "percentage" in
+  let doc = "Generate the percentages of projects to logged time." in
+  let info = C.Cmd.info "percentage" ~doc in
   C.Cmd.v info percentage_t
 ;;
 
@@ -181,7 +183,8 @@ let port =
 let server_t = C.Term.(const server $ api_url $ api_user $ api_pwd $ port)
 
 let server_cmd =
-  let info = C.Cmd.info "server" in
+  let doc = "A small webclient for fetching and displaying reports." in
+  let info = C.Cmd.info "server" ~doc in
   C.Cmd.v info server_t
 ;;
 
@@ -228,14 +231,15 @@ let record_t =
 ;;
 
 let record_cmd =
-  let info = C.Cmd.info "record" in
+  let doc = "Record a timesheet entry." in
+  let info = C.Cmd.info "record" ~doc in
   C.Cmd.v info record_t
 ;;
 
 let main_cmd =
   let doc =
-    "generate controlling information for internal controlling from a kimai \
-     instance"
+    "Interact with a Kimai instance for generating reports and recording \
+     timesheet entries."
   in
   let info = C.Cmd.info "kimai_report" ~doc in
   C.Cmd.group info [ timesheet_cmd; percentage_cmd; server_cmd; record_cmd ]
