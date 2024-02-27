@@ -13,20 +13,20 @@ let timesheet
   api_pwd
   begin_date
   end_date
-  project_name
-  include_overall_duration
+  project_names
+  show_overall_duration
+  emit_column_headers
   =
   let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
   let module R = K.Repo.Cohttp (RC) in
   match
-    K.Report.Timesheet.exec ~project_name (module R) begin_date end_date
+    K.Report.Timesheet.exec ~project_names (module R) begin_date end_date
     |> Lwt_main.run
   with
-  | Error err -> print_endline @@ "Error:" ^ err
+  | Error err -> prerr_endline @@ "Error: " ^ err
   | Ok timesheet ->
-    let () = K.Report.Timesheet.print_csv timesheet in
-    let show_duration = Option.value include_overall_duration ~default:false in
-    if show_duration
+    let () = K.Report.Timesheet.print_csv emit_column_headers timesheet in
+    if show_overall_duration
     then K.Report.Timesheet.print_overall_duration timesheet
     else ()
 ;;
@@ -37,8 +37,34 @@ let percentage api_url api_user api_pwd begin_date end_date =
   match
     K.Report.Percentage.exec (module R) begin_date end_date |> Lwt_main.run
   with
-  | Error err -> print_endline @@ "Error:" ^ err
+  | Error err -> prerr_endline @@ "Error: " ^ err
   | Ok percentages -> K.Report.Percentage.print_csv percentages
+;;
+
+let record
+  api_url
+  api_user
+  api_pwd
+  begin_date_time
+  end_date_time
+  project_name
+  activity_name
+  description
+  =
+  let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
+  let module R = K.Repo.Cohttp (RC) in
+  match
+    K.Record.Record.exec
+      (module R)
+      begin_date_time
+      end_date_time
+      project_name
+      activity_name
+      description
+    |> Lwt_main.run
+  with
+  | Error err -> prerr_endline @@ "Error: " ^ err
+  | Ok _result -> ()
 ;;
 
 let api_url =
@@ -56,29 +82,35 @@ let api_pwd =
   C.Arg.(value @@ pos 2 string "" @@ info [] ~docv:"API_PWD" ~doc)
 ;;
 
-let project_name =
+let project_names =
   let doc =
     "Name of the project the timesheet is generated for. If not given, exports \
-     all projects."
+     all projects. If given more than once, exports all the given projects."
   in
-  C.Arg.(value @@ opt (some string) None @@ info [ "project" ] ~doc)
+  C.Arg.(value @@ opt_all string [] @@ info [ "project" ] ~doc)
 ;;
 
 let show_overall_duration =
   let doc =
     "Whether or not to print the overall duration of the generated timesheet."
   in
-  C.Arg.(value @@ opt (some bool) None @@ info [ "show_duration" ] ~doc)
+  C.Arg.(value @@ flag @@ info [ "show_duration" ] ~doc)
+;;
+
+let emit_column_headers =
+  let doc = "Whether or not to emit the headers of the generated timesheet." in
+  C.Arg.(value @@ flag @@ info [ "emit_column_headers" ] ~doc)
 ;;
 
 let date =
   let parse s =
     try K.Date.from_string_exn s |> Result.ok with
-    | K.Date.Date_format_error s -> Error (`Msg s)
+    | K.Date.Date_format_error s ->
+      Error (`Msg (Printf.sprintf "%s is not a valid date" s))
   in
-  let str = Printf.sprintf in
-  let err_str s = str "+%s" (K.Date.to_html5_string s) in
-  let print ppf p = Format.fprintf ppf "%s" (err_str p) in
+  let print ppf s =
+    Format.fprintf ppf "%s" (Printf.sprintf "+%s" (K.Date.to_html5_string s))
+  in
   C.Arg.conv ~docv:"FROM" (parse, print)
 ;;
 
@@ -106,8 +138,9 @@ let timesheet_t =
     $ api_pwd
     $ begin_date
     $ end_date
-    $ project_name
-    $ show_overall_duration)
+    $ project_names
+    $ show_overall_duration
+    $ emit_column_headers)
 ;;
 
 let timesheet_cmd =
@@ -137,14 +170,60 @@ let server_cmd =
   C.Cmd.v info server_t
 ;;
 
+let record_begin_date_time =
+  let doc =
+    "The begin date and time of the entry. Format is `YYYY-mm-DD HH:MM:SS`."
+  in
+  C.Arg.(required @@ opt (some string) None @@ info [ "begin" ] ~doc)
+;;
+
+let record_end_date_time =
+  let doc =
+    "The end date and time of the entry. Format is `YYYY-mm-DD HH:MM:SS`."
+  in
+  C.Arg.(required @@ opt (some string) None @@ info [ "end" ] ~doc)
+;;
+
+let record_project_name =
+  let doc = "Name of the project the entry is recorded to." in
+  C.Arg.(required @@ opt (some string) None @@ info [ "project" ] ~doc)
+;;
+
+let record_activity_name =
+  let doc = "Name of the activity of the entry." in
+  C.Arg.(required @@ opt (some string) None @@ info [ "activity" ] ~doc)
+;;
+
+let record_description =
+  let doc = "Description of the entry." in
+  C.Arg.(required @@ opt (some string) None @@ info [ "description" ] ~doc)
+;;
+
+let record_t =
+  C.Term.(
+    const record
+    $ api_url
+    $ api_user
+    $ api_pwd
+    $ record_begin_date_time
+    $ record_end_date_time
+    $ record_project_name
+    $ record_activity_name
+    $ record_description)
+;;
+
+let record_cmd =
+  let info = C.Cmd.info "record" in
+  C.Cmd.v info record_t
+;;
+
 let main_cmd =
   let doc =
     "generate controlling information for internal controlling from a kimai \
      instance"
   in
   let info = C.Cmd.info "kimai_report" ~doc in
-  let default = timesheet_t in
-  C.Cmd.group info ~default [ timesheet_cmd; percentage_cmd; server_cmd ]
+  C.Cmd.group info [ timesheet_cmd; percentage_cmd; server_cmd; record_cmd ]
 ;;
 
 let main () = exit (C.Cmd.eval main_cmd)

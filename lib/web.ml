@@ -32,8 +32,8 @@ module View = struct
 
   let timesheets_report_form () =
     let start_of_month, today =
-      ( Date.start_of_month () |> Date.to_html5_string ~with_clock:false
-      , Date.today () |> Date.to_html5_string ~with_clock:false )
+      ( Date.start_of_month () |> Date.to_html5_string
+      , Date.today () |> Date.to_html5_string )
     in
     H.section
       []
@@ -75,7 +75,7 @@ module View = struct
                      [ td
                          (Entry.date entry
                           |> Date.of_ptime
-                          |> Date.to_html5_string ~with_clock:false)
+                          |> Date.to_html5_string)
                      ; td @@ string_of_float @@ Entry.duration entry
                      ; td @@ Option.value ~default:"" @@ Entry.description entry
                      ])
@@ -86,8 +86,8 @@ module View = struct
 
   let percentage_report_form () =
     let start_of_month, today =
-      ( Date.start_of_month () |> Date.to_html5_string ~with_clock:false
-      , Date.today () |> Date.to_html5_string ~with_clock:false )
+      ( Date.start_of_month () |> Date.to_html5_string
+      , Date.today () |> Date.to_html5_string )
     in
     H.section
       []
@@ -181,13 +181,17 @@ module Route = struct
   let handle_get_timesheets (module R : Repo.S) req =
     let begin_ = Dream.query req "begin" in
     let end_ = Dream.query req "end" in
-    let project_name = Dream.query req "project" in
+    let project_names =
+      match Dream.query req "project" with
+      | Some project_name -> [ project_name ]
+      | None -> []
+    in
     let* lwt_report =
       Report.Timesheet.exec
         (module R)
         (begin_date begin_)
         (end_date end_)
-        ~project_name
+        ~project_names
     in
     match lwt_report with
     | Ok report ->

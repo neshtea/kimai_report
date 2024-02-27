@@ -52,7 +52,7 @@ val make_api_get_request
 val make_api_post_request
   :  ?args:(string * string) list
   -> string
-  -> string
+  -> Encoder.Yojson.Encoder.encoder
   -> 'a Decoder.Yojson.Safe.decoder
   -> 'a api_request
 

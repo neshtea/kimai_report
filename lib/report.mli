@@ -3,19 +3,19 @@ module Timesheet : sig
       timesheet entries between [begin_date] and [end_date] (inclusively) or a
       string error. *)
   val exec
-    :  ?project_name:string option
+    :  ?project_names:string list
     -> (module Repo.S)
     -> Date.t
     -> Date.t
     -> Entry.t list Repo.or_error
 
   (** [print_csv pairs] prints all timesheet entries to stdout. *)
-  val print_csv : Entry.t list -> unit
+  val print_csv : bool -> Entry.t list -> unit
 
   (** [overall_duration pairs] calculates the overall duration of the calculated
       timesheet. *)
   val overall_duration : Entry.t list -> float
-  
+
   (** [print_overall_duration pairs] prints the overall duration of the
       calculated timesheet to stdout. *)
   val print_overall_duration : Entry.t list -> unit

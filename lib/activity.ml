@@ -15,3 +15,17 @@ let decoder =
   let* name = D.field "name" D.string in
   D.return { id; name }
 ;;
+
+let encoder name =
+  let activity =
+    `Assoc
+      [ "name", `String name
+      ; "project", `Null
+      ; "comment", `Null
+      ; "teams", `List []
+      ; "visible", `Bool true
+      ; "billable", `Bool true
+      ]
+  in
+  Encoder.Yojson.Encoder.to_string activity
+;;

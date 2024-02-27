@@ -42,9 +42,7 @@ let request_headers api_user api_pwd =
 ;;
 
 type 'a body_decoder = 'a Decoder.Yojson.Safe.decoder
-
-(* FIXME *)
-type body_encoder = string
+type body_encoder = Encoder.Yojson.Encoder.encoder
 
 type 'a request_method =
   | Get of 'a body_decoder
@@ -106,6 +104,26 @@ let ( --> ) m json_body_fn =
     Lwt.return_error (Response_error.Http_error (status_code, body))
 ;;
 
+let encode_body body_encoder = Cohttp_lwt.Body.of_string (body_encoder ())
+
+let get_with_total_count headers uri =
+  let ( >>= ) = Lwt.bind in
+  let response_m = Cohttp_lwt_unix.Client.head ~headers uri in
+  response_m
+  >>= fun response ->
+  let status_code = Cohttp.(Response.status response |> Code.code_of_status) in
+  if Cohttp.Code.is_success status_code
+  then (
+    let size_argument =
+      match Cohttp.(Header.get (Response.headers response) "x-total-count") with
+      | Some total_count -> [ "size", total_count ]
+      | None -> []
+    in
+    let uri = Uri.add_query_params' uri size_argument in
+    Cohttp_lwt_unix.Client.get ~headers uri)
+  else Cohttp_lwt_unix.Client.get ~headers uri
+;;
+
 let run_request (module RC : REQUEST_CFG) = function
   | Api_request (request_method, endpoint, args) ->
     let headers = request_headers RC.api_user RC.api_pwd in
@@ -116,10 +134,10 @@ let run_request (module RC : REQUEST_CFG) = function
     in
     let module C = Cohttp_lwt_unix.Client in
     (match request_method with
-     | Get body_decoder -> C.get ~headers uri --> body_decoder
+     | Get body_decoder -> get_with_total_count headers uri --> body_decoder
      | Post (body_encoder, body_decoder) ->
-       C.post ~body:(Cohttp_lwt.Body.of_string body_encoder) ~headers uri
-       --> body_decoder)
+       let body = encode_body body_encoder in
+       C.post ~body ~headers uri --> body_decoder)
 ;;
 
 let return x = Lwt.return_ok x

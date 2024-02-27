@@ -16,15 +16,16 @@ let decoder =
   D.return { id; name }
 ;;
 
-let encoder name customer =
-  let project =
+let encoder name =
+  let customer =
     `Assoc
       [ "name", `String name
-      ; "customer", `Int customer
+      ; "currency", `String "EUR"
+      ; "country", `String "DE"
+      ; "timezone", `String "Europe/Berlin"
       ; "visible", `Bool true
       ; "billable", `Bool true
-      ; "globalActivities", `Bool true
       ]
   in
-  Encoder.Yojson.Encoder.to_string project
+  Encoder.Yojson.Encoder.to_string customer
 ;;

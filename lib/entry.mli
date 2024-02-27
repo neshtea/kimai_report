@@ -8,3 +8,11 @@ val with_description : t -> string option -> t
 val project : t -> int option
 val date_string : t -> string
 val decoder : t Decoder.Yojson.Safe.decoder
+
+val encoder
+  :  string
+  -> string
+  -> int
+  -> int
+  -> string
+  -> Encoder.Yojson.Encoder.encoder

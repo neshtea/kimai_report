@@ -5,15 +5,30 @@ type 'a or_error = ('a, string) result Lwt.t
 (** A repo, defined by a module implementing {!S}, serves as a source for
     generating reports. *)
 module type S = sig
+  (** [find_customers ()] is a list of all {!Customer.t} or an error. *)
+  val find_customers : unit -> Customer.t list or_error
+
+  (** [add_customer name] adds a customer and returns true or an error. *)
+  val add_customer : string -> bool or_error
+
   (** [find_projects ()] is a list of all {!Project.t} or an error. *)
   val find_projects : unit -> Project.t list or_error
+
+  (** [add_project name client-id] adds a project and returns true or an error. *)
+  val add_project : string -> int -> bool or_error
 
   (** [find_activities ()] is a list of all {!Activity.t} or an error. *)
   val find_activities : unit -> Activity.t list or_error
 
+  (** [add_activity name] adds an activity and returns true or an error. *)
+  val add_activity : string -> bool or_error
+
   (** [find_timesheet begin_date end_date] is a list of all {!Entry.t} or an
       error between the [begin_date] and [end_date], inclusively. *)
   val find_timesheet : Date.t -> Date.t -> Entry.t list or_error
+
+  (** adds an timesheet record *)
+  val add_timesheet : string -> string -> int -> int -> string -> bool or_error
 end
 
 (** Implementation of a repo that, given a {!Api.REQUEST_CFG}, talks directly to
@@ -78,7 +93,7 @@ module Repo_utils
     (_ : functor (E : Bi_lookup.Elt_sig) -> Bi_lookup.S with type elt = E.t) : sig
   include S
 
-  (** [id_by_name (module Elt) elems name] is some elt of a list of elems where
+  (** [by_name (module Elt) elems name] is some elt of a list of elems where
       each elem is an Elt, identified by it's name. *)
   val by_name
     :  (module Bi_lookup.Elt_sig with type t = 'a)
@@ -86,11 +101,27 @@ module Repo_utils
     -> string
     -> 'a option
 
-  (** [name_by_id (module Elt) elems id] is some elt from a list of elems where
+  (** [id_by_name (module Elt) elems name] is some elt id of a list of elems where
+      each elem is an Elt, identified by it's name. *)
+  val id_by_name
+    :  (module Bi_lookup.Elt_sig with type t = 'a)
+    -> 'a list
+    -> string
+    -> int option
+
+  (** [by_id (module Elt) elems id] is some elt from a list of elems where
       each elem is an Elt, identified by it's id. *)
   val by_id
     :  (module Bi_lookup.Elt_sig with type t = 'a)
     -> 'a list
     -> int
     -> 'a option
+
+  (** [name_by_id (module Elt) elems id] is some elt name from a list of elems where
+      each elem is an Elt, identified by it's id. *)
+  val name_by_id
+    :  (module Bi_lookup.Elt_sig with type t = 'a)
+    -> 'a list
+    -> int
+    -> string option
 end

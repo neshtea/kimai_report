@@ -1,31 +1,47 @@
 module Timesheet = struct
-  let project_matches project_name project_by_name =
-    match project_name with
-    | None -> fun _ -> true
-    | Some project_name ->
+  let projects_matches project_ids =
+    if [] == project_ids
+    then fun _ -> true
+    else
       fun entry ->
-        let project = Entry.project entry in
-        (match project with
-         | None -> false
-         | Some project_id ->
-           (match project_by_name project_name with
-            | None -> false
-            | Some p -> Project.id p == project_id))
+      let project = Entry.project entry in
+      match project with
+      | None -> false
+      | Some project_id -> List.mem project_id project_ids
   ;;
 
-  let fill_description activity_by_id entry =
-    let description =
+  let fill_description
+    ?(prepend_project_name = false)
+    activity_by_id
+    project_by_id
+    entry
+    =
+    let description_opt =
       match Entry.description entry, Entry.activity entry with
       | Some description, Some _ -> Some description
       | Some description, None -> Some description
-      | None, Some activity_id ->
-        activity_by_id activity_id |> Option.map Activity.name
+      | None, Some activity_id -> activity_by_id activity_id
       | None, None -> None
     in
-    Entry.with_description entry description
+    let description_with_project_opt =
+      if prepend_project_name
+      then (
+        let project_name_opt =
+          match Entry.project entry with
+          | Some project_id -> project_by_id project_id
+          | None -> None
+        in
+        match project_name_opt, description_opt with
+        | Some project_name, Some description ->
+          Some (Printf.sprintf "%s: %s" project_name description)
+        | None, description_opt -> description_opt
+        | project_name_opt, None -> project_name_opt)
+      else description_opt
+    in
+    Entry.with_description entry description_with_project_opt
   ;;
 
-  let exec ?(project_name = None) (module R : Repo.S) begin_date end_date =
+  let exec ?(project_names = []) (module R : Repo.S) begin_date end_date =
     let ( let* ) = Api.bind in
     let* projects = R.find_projects () in
     let* activities = R.find_activities () in
@@ -39,10 +55,12 @@ module Timesheet = struct
     |> Lwt.return_ok
   ;;
 
-  let print_csv =
+  let print_csv emit_column_headers =
+    if emit_column_headers
+    then Printf.printf "\"Date\",\"Duration\",\"Description\"\n";
     List.iter (fun entry ->
       Printf.printf
-        "%s,%f,\"%s\"\n"
+        "\"%s\",\"%.2f\",\"%s\"\n"
         (Entry.date_string entry)
         (Entry.duration entry)
         (Option.value (Entry.description entry) ~default:"no description"))
@@ -53,7 +71,7 @@ module Timesheet = struct
   ;;
 
   let print_overall_duration timesheet =
-    timesheet |> overall_duration |> Printf.printf "Overall hours:\n%f"
+    timesheet |> overall_duration |> Printf.eprintf "Overall hours:\n%f"
   ;;
 end
 

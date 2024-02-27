@@ -1,5 +1,5 @@
 type 'a or_error = ('a, string) result Lwt.t
-(* not sure if I wan to have the Lwt async in the signature. *)
+(* not sure if I want to have the Lwt async in the signature. *)
 
 let or_error_string m =
   let ( >>= ) = Lwt.bind in
@@ -10,9 +10,14 @@ let or_error_string m =
 ;;
 
 module type S = sig
+  val find_customers : unit -> Customer.t list or_error
+  val add_customer : string -> bool or_error
   val find_projects : unit -> Project.t list or_error
+  val add_project : string -> int -> bool or_error
   val find_activities : unit -> Activity.t list or_error
+  val add_activity : string -> bool or_error
   val find_timesheet : Date.t -> Date.t -> Entry.t list or_error
+  val add_timesheet : string -> string -> int -> int -> string -> bool or_error
 end
 
 module Cohttp (RC : Api.REQUEST_CFG) : S = struct
@@ -22,25 +27,57 @@ module Cohttp (RC : Api.REQUEST_CFG) : S = struct
     Api.run_request (module RC) api_request |> or_error_string
   ;;
 
+  let find_customers () =
+    D.list Customer.decoder |> Api.make_api_get_request "/customers" |> run
+  ;;
+
+  let add_customer name =
+    D.return true
+    |> Api.make_api_post_request "/customers" (Customer.encoder name)
+    |> run
+  ;;
+
   let find_projects () =
     D.list Project.decoder |> Api.make_api_get_request "/projects" |> run
+  ;;
+
+  let add_project name client_id =
+    D.return true
+    |> Api.make_api_post_request "/projects" (Project.encoder name client_id)
+    |> run
   ;;
 
   let find_activities () =
     D.list Activity.decoder |> Api.make_api_get_request "/activities" |> run
   ;;
 
+  let add_activity name =
+    D.return true
+    |> Api.make_api_post_request "/activities" (Activity.encoder name)
+    |> run
+  ;;
+
   let find_timesheet begin_date end_date =
     D.list Entry.decoder
     |> Api.make_api_get_request
          ~args:
-           [ "begin", Date.to_html5_string begin_date
-           ; "end", Date.to_html5_string end_date
-           ; "size", "1000"
-             (* NOTE: I don't think we'll ever have that many entries in a
-                particular range, but the default (NULL) is too low. *)
+           [ "begin", Date.to_html5_start_of_day_string begin_date
+           ; "end", Date.to_html5_end_of_day_string end_date
            ]
          "/timesheets"
+    |> run
+  ;;
+
+  let add_timesheet begin_date_time end_date_time project activity description =
+    D.return true
+    |> Api.make_api_post_request
+         "/timesheets"
+         (Entry.encoder
+            begin_date_time
+            end_date_time
+            project
+            activity
+            description)
     |> run
   ;;
 end
@@ -99,10 +136,10 @@ module Bi_lookup = struct
       let by_id = Hashtbl.create len in
       List.map (fun elt -> E.name elt, elt) elements
       |> List.to_seq
-      |> Hashtbl.add_seq (Hashtbl.create len);
+      |> Hashtbl.add_seq by_name;
       List.map (fun elt -> E.id elt, elt) elements
       |> List.to_seq
-      |> Hashtbl.add_seq (Hashtbl.create len);
+      |> Hashtbl.add_seq by_id;
       { by_name; by_id }
     ;;
 
@@ -129,6 +166,17 @@ struct
     Container.make things |> Container.by_name name
   ;;
 
+  let id_by_name
+    (type a)
+    (module E : Bi_lookup.Elt_sig with type t = a)
+    (things : a list)
+    name
+    =
+    match by_name (module E) things name with
+    | Some thing -> Some (E.id thing)
+    | None -> None
+  ;;
+
   let by_id
     (type a)
     (module E : Bi_lookup.Elt_sig with type t = a)
@@ -137,5 +185,16 @@ struct
     =
     let module Container = Make_container (E) in
     Container.make things |> Container.by_id id
+  ;;
+
+  let name_by_id
+    (type a)
+    (module E : Bi_lookup.Elt_sig with type t = a)
+    (things : a list)
+    id
+    =
+    match by_id (module E) things id with
+    | Some thing -> Some (E.name thing)
+    | None -> None
   ;;
 end
