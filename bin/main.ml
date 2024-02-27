@@ -23,7 +23,7 @@ let timesheet
     K.Report.Timesheet.exec ~project_names (module R) begin_date end_date
     |> Lwt_main.run
   with
-  | Error err -> print_endline @@ "Error:" ^ err
+  | Error err -> prerr_endline @@ "Error: " ^ err
   | Ok timesheet ->
     let () = K.Report.Timesheet.print_csv emit_column_headers timesheet in
     if show_overall_duration
@@ -37,7 +37,7 @@ let percentage api_url api_user api_pwd begin_date end_date =
   match
     K.Report.Percentage.exec (module R) begin_date end_date |> Lwt_main.run
   with
-  | Error err -> print_endline @@ "Error:" ^ err
+  | Error err -> prerr_endline @@ "Error: " ^ err
   | Ok percentages -> K.Report.Percentage.print_csv percentages
 ;;
 
@@ -63,7 +63,7 @@ let record
       description
     |> Lwt_main.run
   with
-  | Error err -> print_endline @@ "Error:" ^ err
+  | Error err -> prerr_endline @@ "Error: " ^ err
   | Ok _result -> ()
 ;;
 

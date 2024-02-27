@@ -91,7 +91,7 @@ module Timesheet = struct
   ;;
 
   let print_overall_duration timesheet =
-    timesheet |> overall_duration |> Printf.printf "Overall hours:\n%f"
+    timesheet |> overall_duration |> Printf.eprintf "Overall hours:\n%f"
   ;;
 end
 
