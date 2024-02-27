@@ -10,16 +10,35 @@ module Timesheet = struct
       | Some project_id -> List.mem project_id project_ids
   ;;
 
-  let fill_description activity_by_id entry =
-    let description =
+  let fill_description
+    ?(prepend_project_name = false)
+    activity_by_id
+    project_by_id
+    entry
+    =
+    let description_opt =
       match Entry.description entry, Entry.activity entry with
       | Some description, Some _ -> Some description
       | Some description, None -> Some description
-      | None, Some activity_id ->
-        activity_by_id activity_id |> Option.map Activity.name
+      | None, Some activity_id -> activity_by_id activity_id
       | None, None -> None
     in
-    Entry.with_description entry description
+    let description_with_project_opt =
+      if prepend_project_name
+      then (
+        let project_name_opt =
+          match Entry.project entry with
+          | Some project_id -> project_by_id project_id
+          | None -> None
+        in
+        match project_name_opt, description_opt with
+        | Some project_name, Some description ->
+          Some (Printf.sprintf "%s: %s" project_name description)
+        | None, description_opt -> description_opt
+        | project_name_opt, None -> project_name_opt)
+      else description_opt
+    in
+    Entry.with_description entry description_with_project_opt
   ;;
 
   let exec ?(project_names = []) (module R : Repo.S) begin_date end_date =
@@ -42,7 +61,11 @@ module Timesheet = struct
       let* timesheet = R.find_timesheet begin_date end_date in
       timesheet
       |> List.filter (projects_matches some_project_ids)
-      |> List.map (fill_description @@ RU.by_id (module Activity) activities)
+      |> List.map
+           (fill_description
+              ~prepend_project_name:([] != some_project_ids)
+              (RU.name_by_id (module Activity) activities)
+              (RU.name_by_id (module Project) projects))
       |> List.rev
       |> Lwt.return_ok
     else
