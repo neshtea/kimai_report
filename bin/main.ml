@@ -16,11 +16,17 @@ let timesheet
   project_names
   show_overall_duration
   emit_column_headers
+  prepend_project_name
   =
   let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
   let module R = K.Repo.Cohttp (RC) in
   match
-    K.Report.Timesheet.exec ~project_names (module R) begin_date end_date
+    K.Report.Timesheet.exec
+      ~project_names
+      ~prepend_project_name
+      (module R)
+      begin_date
+      end_date
     |> Lwt_main.run
   with
   | Error err -> prerr_endline @@ "Error: " ^ err
@@ -102,6 +108,14 @@ let emit_column_headers =
   C.Arg.(value @@ flag @@ info [ "emit_column_headers" ] ~doc)
 ;;
 
+let prepend_project_name =
+  let doc =
+    "Whether or not to prepend the project name to the descriptions of the \
+     entries. This is useful if a timesheet covers different projects at once."
+  in
+  C.Arg.(value @@ flag @@ info [ "prepend_project_name" ] ~doc)
+;;
+
 let date =
   let parse s =
     try K.Date.from_string_exn s |> Result.ok with
@@ -140,7 +154,8 @@ let timesheet_t =
     $ end_date
     $ project_names
     $ show_overall_duration
-    $ emit_column_headers)
+    $ emit_column_headers
+    $ prepend_project_name)
 ;;
 
 let timesheet_cmd =

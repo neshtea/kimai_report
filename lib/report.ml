@@ -41,7 +41,13 @@ module Timesheet = struct
     Entry.with_description entry description_with_project_opt
   ;;
 
-  let exec ?(project_names = []) (module R : Repo.S) begin_date end_date =
+  let exec
+    ?(project_names = [])
+    ?(prepend_project_name = false)
+    (module R : Repo.S)
+    begin_date
+    end_date
+    =
     let ( let* ) = Api.bind in
     let* projects = R.find_projects () in
     let* activities = R.find_activities () in
@@ -63,7 +69,7 @@ module Timesheet = struct
       |> List.filter (projects_matches some_project_ids)
       |> List.map
            (fill_description
-              ~prepend_project_name:([] != some_project_ids)
+              ~prepend_project_name
               (RU.name_by_id (module Activity) activities)
               (RU.name_by_id (module Project) projects))
       |> List.rev
