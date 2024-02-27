@@ -80,7 +80,7 @@ module Timesheet = struct
     then Printf.printf "\"Date\",\"Duration\",\"Description\"\n";
     List.iter (fun entry ->
       Printf.printf
-        "%s,%f,\"%s\"\n"
+        "\"%s\",\"%.2f\",\"%s\"\n"
         (Entry.date_string entry)
         (Entry.duration entry)
         (Option.value (Entry.description entry) ~default:"no description"))
