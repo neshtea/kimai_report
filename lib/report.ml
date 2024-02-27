@@ -71,7 +71,7 @@ module Timesheet = struct
     else
       Lwt.return_error
       @@ Printf.sprintf
-           "projects [ %s ] do not exist"
+           "Projects do not exist: [%s]"
            (String.concat ", " none_project_names)
   ;;
 
