@@ -37,11 +37,12 @@ let timesheet
     else ()
 ;;
 
-let percentage api_url api_user api_pwd begin_date end_date =
+let percentage api_url api_user api_pwd begin_date end_date by_customers =
   let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
   let module R = K.Repo.Cohttp (RC) in
   match
-    K.Report.Percentage.exec (module R) begin_date end_date |> Lwt_main.run
+    K.Report.Percentage.exec ~by_customers (module R) begin_date end_date
+    |> Lwt_main.run
   with
   | Error err -> prerr_endline @@ "Error: " ^ err
   | Ok percentages -> K.Report.Percentage.print_csv percentages
@@ -144,6 +145,14 @@ let end_date =
   C.Arg.(value @@ opt date (K.Date.today ()) @@ info [ "end" ] ~doc)
 ;;
 
+let percentage_by_customers =
+  let doc =
+    "Whether to calculate percentages per customers or per projects. Default \
+     is per projects."
+  in
+  C.Arg.(value @@ flag @@ info [ "by_customers" ] ~doc)
+;;
+
 let timesheet_t =
   C.Term.(
     const timesheet
@@ -166,7 +175,13 @@ let timesheet_cmd =
 
 let percentage_t =
   C.Term.(
-    const percentage $ api_url $ api_user $ api_pwd $ begin_date $ end_date)
+    const percentage
+    $ api_url
+    $ api_user
+    $ api_pwd
+    $ begin_date
+    $ end_date
+    $ percentage_by_customers)
 ;;
 
 let percentage_cmd =

@@ -27,7 +27,8 @@ module Percentage : sig
       names to percentages. Includes everything between [begin_date] and
       [end_date] (inclusively) or a string error. *)
   val exec
-    :  (module Repo.S)
+    :  ?by_customers:bool
+    -> (module Repo.S)
     -> Date.t
     -> Date.t
     -> (string * (int * float * int)) list Repo.or_error

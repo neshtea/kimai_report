@@ -1,10 +1,12 @@
 type t =
   { id : int
   ; name : string
+  ; customer : int
   }
 
 let id { id; _ } = id
 let name { name; _ } = name
+let customer { customer; _ } = customer
 
 module D = Decoder.Yojson.Safe
 
@@ -13,7 +15,8 @@ let ( let* ) = D.bind
 let decoder =
   let* id = D.field "id" D.int in
   let* name = D.field "name" D.string in
-  D.return { id; name }
+  let* customer = D.field "customer" D.int in
+  D.return { id; name; customer }
 ;;
 
 let encoder name customer =

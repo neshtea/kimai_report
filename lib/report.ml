@@ -104,7 +104,9 @@ end
 module Percentage = struct
   module SM = Map.Make (String)
 
-  let project_durations time_entries project_by_id =
+  let project_labels (module R : Repo.S) projects =
+    let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
+    let project_by_id = RU.by_id (module Project) projects in
     let label entry =
       match Entry.project entry with
       | None -> "unknown"
@@ -113,10 +115,32 @@ module Percentage = struct
          | None -> "unknown"
          | Some p -> Project.name p)
     in
+    label
+  ;;
+
+  let customer_labels (module R : Repo.S) projects customers =
+    let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
+    let project_by_id = RU.by_id (module Project) projects in
+    let customer_by_id = RU.by_id (module Customer) customers in
+    let label entry =
+      match Entry.project entry with
+      | None -> "unknown"
+      | Some project_id ->
+        (match project_by_id project_id with
+         | None -> "unknown"
+         | Some p ->
+           (match customer_by_id @@ Project.customer p with
+            | None -> "unknown"
+            | Some c -> Customer.name c))
+    in
+    label
+  ;;
+
+  let durations_by_label time_entries by_label =
     List.fold_left
       (fun m t ->
         SM.update
-          (label t)
+          (by_label t)
           (function
             | None -> Some (Entry.duration t)
             | Some f -> Some (f +. Entry.duration t))
@@ -125,13 +149,18 @@ module Percentage = struct
       time_entries
   ;;
 
-  let exec (module R : Repo.S) begin_date end_date =
+  let exec ?(by_customers = false) (module R : Repo.S) begin_date end_date =
     let ( let* ) = Api.bind in
     let* projects = R.find_projects () in
+    let* customers = R.find_customers () in
     let* timesheet = R.find_timesheet begin_date end_date in
-    let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
-    let project_by_id = RU.by_id (module Project) projects in
-    let durations = project_durations timesheet project_by_id in
+    let durations =
+      durations_by_label
+        timesheet
+        (if by_customers
+         then customer_labels (module R) projects customers
+         else project_labels (module R) projects)
+    in
     let overall_duration =
       SM.bindings durations |> List.fold_left (fun acc kv -> acc +. snd kv) 0.0
     in
