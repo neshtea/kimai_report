@@ -170,6 +170,9 @@ module Percentage = struct
       let percentage = duration /. overall_duration *. 100. in
       int_floor duration, percentage, int_floor percentage)
     |> SM.bindings
+    |> List.sort
+         (fun (_, (overall_hours_1, _, _)) (_, (overall_hours_2, _, _)) ->
+            compare overall_hours_2 overall_hours_1)
     |> Lwt.return_ok
   ;;
 
