@@ -97,7 +97,7 @@ module Timesheet = struct
   ;;
 
   let print_overall_duration timesheet =
-    timesheet |> overall_duration |> Printf.eprintf "Overall hours:\n%f"
+    timesheet |> overall_duration |> Printf.eprintf "Overall hours:\n%.2f"
   ;;
 end
 
@@ -148,7 +148,7 @@ module Percentage = struct
     List.iter
       (fun (project_name, (overall_hours, percentage, percentage_rounded)) ->
         Printf.printf
-          "%s,%ih,%f%%,%i%%\n"
+          "%s,%ih,%.2f%%,%i%%\n"
           project_name
           overall_hours
           percentage

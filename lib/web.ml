@@ -56,17 +56,25 @@ module View = struct
   let tr tds = H.tr [] tds
   let td txt = H.td [] [ D.txt "%s" txt ]
 
+  let tdf float =
+    H.td [ D.string_attr "style" "text-align:right" ] [ D.txt "%.2f" float ]
+  ;;
+
+  let tdi int =
+    H.td [ D.string_attr "style" "text-align:right" ] [ D.txt "%d" int ]
+  ;;
+
   let timesheets_report_table report =
     H.div
       [ H.id "timesheets_report_table" ]
       [ H.p
           []
-          [ D.txt "Overall duration: %fh"
+          [ D.txt "Overall duration: %.2fh"
             @@ Report.Timesheet.overall_duration report
           ]
       ; H.table
           []
-          [ H.thead [] [ th "Date"; th "Hours"; th "Description" ]
+          [ H.thead [] [ th "Date"; th "Duration"; th "Description" ]
           ; H.body
               []
               (List.map
@@ -76,7 +84,7 @@ module View = struct
                          (Entry.date entry
                           |> Date.of_ptime
                           |> Date.to_html5_string)
-                     ; td @@ string_of_float @@ Entry.duration entry
+                     ; tdf @@ Entry.duration entry
                      ; td @@ Option.value ~default:"" @@ Entry.description entry
                      ])
                  report)
@@ -125,9 +133,9 @@ module View = struct
              (fun (project_name, (overall_hours, percentage, percentage_rounded)) ->
                tr
                  [ td project_name
-                 ; td @@ string_of_int overall_hours
-                 ; td @@ string_of_float percentage
-                 ; td @@ string_of_int percentage_rounded
+                 ; tdi overall_hours
+                 ; tdf percentage
+                 ; tdi percentage_rounded
                  ])
              report)
       ]
