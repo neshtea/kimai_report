@@ -56,17 +56,25 @@ module View = struct
   let tr tds = H.tr [] tds
   let td txt = H.td [] [ D.txt "%s" txt ]
 
+  let tdf float =
+    H.td [ D.string_attr "style" "text-align:right" ] [ D.txt "%.2f" float ]
+  ;;
+
+  let tdi int =
+    H.td [ D.string_attr "style" "text-align:right" ] [ D.txt "%d" int ]
+  ;;
+
   let timesheets_report_table report =
     H.div
       [ H.id "timesheets_report_table" ]
       [ H.p
           []
-          [ D.txt "Overall duration: %fh"
+          [ D.txt "Overall duration: %.2fh"
             @@ Report.Timesheet.overall_duration report
           ]
       ; H.table
           []
-          [ H.thead [] [ th "Date"; th "Hours"; th "Description" ]
+          [ H.thead [] [ th "Date"; th "Duration"; th "Description" ]
           ; H.body
               []
               (List.map
@@ -76,7 +84,7 @@ module View = struct
                          (Entry.date entry
                           |> Date.of_ptime
                           |> Date.to_html5_string)
-                     ; td @@ string_of_float @@ Entry.duration entry
+                     ; tdf @@ Entry.duration entry
                      ; td @@ Option.value ~default:"" @@ Entry.description entry
                      ])
                  report)
@@ -125,9 +133,9 @@ module View = struct
              (fun (project_name, (overall_hours, percentage, percentage_rounded)) ->
                tr
                  [ td project_name
-                 ; td @@ string_of_int overall_hours
-                 ; td @@ string_of_float percentage
-                 ; td @@ string_of_int percentage_rounded
+                 ; tdi overall_hours
+                 ; tdf percentage
+                 ; tdi percentage_rounded
                  ])
              report)
       ]
@@ -148,6 +156,8 @@ module View = struct
           ]
       ]
   ;;
+
+  let error error_text = H.p [] [ D.txt "ERROR: %s" error_text ]
 end
 
 module Route = struct
@@ -175,7 +185,7 @@ module Route = struct
       if is_hx_request req
       then View.percentage_report_table report |> Dream_html.respond
       else View.index None (Some report) |> Dream_html.respond
-    | Error err -> Dream.html ~status:`Internal_Server_Error err
+    | Error err -> View.error err |> Dream_html.respond
   ;;
 
   let handle_get_timesheets (module R : Repo.S) req =
@@ -183,7 +193,8 @@ module Route = struct
     let end_ = Dream.query req "end" in
     let project_names =
       match Dream.query req "project" with
-      | Some project_name -> [ project_name ]
+      | Some project_name ->
+        if String.length project_name == 0 then [] else [ project_name ]
       | None -> []
     in
     let* lwt_report =
@@ -198,7 +209,7 @@ module Route = struct
       if is_hx_request req
       then View.timesheets_report_table report |> Dream_html.respond
       else View.index (Some report) None |> Dream_html.respond
-    | Error err -> Dream.html ~status:`Internal_Server_Error err
+    | Error err -> View.error err |> Dream_html.respond
   ;;
 
   let routes repo =

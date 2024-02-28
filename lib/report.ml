@@ -41,18 +41,44 @@ module Timesheet = struct
     Entry.with_description entry description_with_project_opt
   ;;
 
-  let exec ?(project_names = []) (module R : Repo.S) begin_date end_date =
+  let exec
+    ?(project_names = [])
+    ?(prepend_project_name = false)
+    (module R : Repo.S)
+    begin_date
+    end_date
+    =
     let ( let* ) = Api.bind in
     let* projects = R.find_projects () in
     let* activities = R.find_activities () in
-    let* timesheet = R.find_timesheet begin_date end_date in
     let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
-    timesheet
-    |> List.filter
-         (project_matches project_name @@ RU.by_name (module Project) projects)
-    |> List.map (fill_description @@ RU.by_id (module Activity) activities)
-    |> List.rev
-    |> Lwt.return_ok
+    let id_by_name = RU.id_by_name (module Project) projects in
+    let some_project_ids, none_project_names =
+      List.fold_left
+        (fun (some_project_ids, none_project_names) project_name ->
+          match id_by_name project_name with
+          | Some id -> id :: some_project_ids, none_project_names
+          | None -> some_project_ids, project_name :: none_project_names)
+        ([], [])
+        project_names
+    in
+    if [] == none_project_names
+    then
+      let* timesheet = R.find_timesheet begin_date end_date in
+      timesheet
+      |> List.filter (projects_matches some_project_ids)
+      |> List.map
+           (fill_description
+              ~prepend_project_name
+              (RU.name_by_id (module Activity) activities)
+              (RU.name_by_id (module Project) projects))
+      |> List.rev
+      |> Lwt.return_ok
+    else
+      Lwt.return_error
+      @@ Printf.sprintf
+           "Projects do not exist: [%s]"
+           (String.concat ", " none_project_names)
   ;;
 
   let print_csv emit_column_headers =
@@ -71,7 +97,7 @@ module Timesheet = struct
   ;;
 
   let print_overall_duration timesheet =
-    timesheet |> overall_duration |> Printf.eprintf "Overall hours:\n%f"
+    timesheet |> overall_duration |> Printf.eprintf "Overall hours:\n%.2f"
   ;;
 end
 
@@ -122,7 +148,7 @@ module Percentage = struct
     List.iter
       (fun (project_name, (overall_hours, percentage, percentage_rounded)) ->
         Printf.printf
-          "%s,%ih,%f%%,%i%%\n"
+          "%s,%ih,%.2f%%,%i%%\n"
           project_name
           overall_hours
           percentage

@@ -4,6 +4,7 @@ module Timesheet : sig
       string error. *)
   val exec
     :  ?project_names:string list
+    -> ?prepend_project_name:bool
     -> (module Repo.S)
     -> Date.t
     -> Date.t

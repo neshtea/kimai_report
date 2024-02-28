@@ -27,6 +27,10 @@ Generate the percentages (projects to logged time spent on these projects).
 
 A small webclient for fetching and displaying reports.
 
+### `record`
+
+Record a timesheet entry.
+
 ## Usage
 
 You can either check out this repo and use the nix build yourself or run it
