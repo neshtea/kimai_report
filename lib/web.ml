@@ -193,7 +193,8 @@ module Route = struct
     let end_ = Dream.query req "end" in
     let project_names =
       match Dream.query req "project" with
-      | Some project_name -> [ project_name ]
+      | Some project_name ->
+        if String.length project_name == 0 then [] else [ project_name ]
       | None -> []
     in
     let* lwt_report =
