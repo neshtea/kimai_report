@@ -156,6 +156,8 @@ module View = struct
           ]
       ]
   ;;
+
+  let error error_text = H.p [] [ D.txt "ERROR: %s" error_text ]
 end
 
 module Route = struct
@@ -183,7 +185,7 @@ module Route = struct
       if is_hx_request req
       then View.percentage_report_table report |> Dream_html.respond
       else View.index None (Some report) |> Dream_html.respond
-    | Error err -> Dream.html ~status:`Internal_Server_Error err
+    | Error err -> View.error err |> Dream_html.respond
   ;;
 
   let handle_get_timesheets (module R : Repo.S) req =
@@ -206,7 +208,7 @@ module Route = struct
       if is_hx_request req
       then View.timesheets_report_table report |> Dream_html.respond
       else View.index (Some report) None |> Dream_html.respond
-    | Error err -> Dream.html ~status:`Internal_Server_Error err
+    | Error err -> View.error err |> Dream_html.respond
   ;;
 
   let routes repo =
