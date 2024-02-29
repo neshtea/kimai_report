@@ -207,33 +207,47 @@ module Working_time = struct
   let earlier t1 t2 = if compare t1 t2 <= 0 then t1 else t2
   let later t1 t2 = if compare t2 t2 <= 0 then t1 else t2
 
-  let exec (module R : Repo.S) begin_date end_date =
+  let exec ?(project_names = []) (module R : Repo.S) begin_date end_date =
     let ( let* ) = Api.bind in
     let* timesheet = R.find_timesheet begin_date end_date in
-    List.fold_left
-      (fun mp entry ->
-        SM.update
-          (Entry.date_string entry)
-          (fun workday_opt ->
-            match workday_opt with
-            | Some { start_time; end_time; duration; _ } ->
-              Some
-                { date = Entry.date_string entry
-                ; start_time =
-                    earlier start_time @@ Entry.start_time_string entry
-                ; end_time = later end_time @@ Entry.end_time_string entry
-                ; duration = duration +. Entry.duration entry
-                }
-            | None ->
-              Some
-                { date = Entry.date_string entry
-                ; start_time = Entry.start_time_string entry
-                ; end_time = Entry.end_time_string entry
-                ; duration = Entry.duration entry
-                })
-          mp)
-      SM.empty
-      timesheet
+    let* projects = R.find_projects () in
+    let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
+    let id_by_name = RU.id_by_name (module Project) projects in
+    let some_project_ids, _ =
+      List.fold_left
+        (fun (some_project_ids, none_project_names) project_name ->
+          match id_by_name project_name with
+          | Some id -> id :: some_project_ids, none_project_names
+          | None -> some_project_ids, project_name :: none_project_names)
+        ([], [])
+        project_names
+    in
+    timesheet
+    |> List.filter (fun entry ->
+      not (Timesheet.projects_matches some_project_ids entry))
+    |> List.fold_left
+         (fun mp entry ->
+           SM.update
+             (Entry.date_string entry)
+             (fun workday_opt ->
+               match workday_opt with
+               | Some { start_time; end_time; duration; _ } ->
+                 Some
+                   { date = Entry.date_string entry
+                   ; start_time =
+                       earlier start_time @@ Entry.start_time_string entry
+                   ; end_time = later end_time @@ Entry.end_time_string entry
+                   ; duration = duration +. Entry.duration entry
+                   }
+               | None ->
+                 Some
+                   { date = Entry.date_string entry
+                   ; start_time = Entry.start_time_string entry
+                   ; end_time = Entry.end_time_string entry
+                   ; duration = Entry.duration entry
+                   })
+             mp)
+         SM.empty
     |> SM.bindings
     |> List.map (fun (_, workday) -> workday)
     |> Lwt.return_ok

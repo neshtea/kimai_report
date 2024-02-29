@@ -55,11 +55,13 @@ let working_time
   begin_date
   end_date
   emit_column_headers
+  project_names
   =
   let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
   let module R = K.Repo.Cohttp (RC) in
   match
-    K.Report.Working_time.exec (module R) begin_date end_date |> Lwt_main.run
+    K.Report.Working_time.exec ~project_names (module R) begin_date end_date
+    |> Lwt_main.run
   with
   | Error err -> prerr_endline @@ "Error: " ^ err
   | Ok timesheet ->
@@ -209,6 +211,15 @@ let percentage_cmd =
   C.Cmd.v info percentage_t
 ;;
 
+let working_time_project_names =
+  let doc =
+    "Name of the projects that are not included in the working-times report. \
+     If not given, all projects are included. If given more than once, does \
+     not include all the given projects."
+  in
+  C.Arg.(value @@ opt_all string [] @@ info [ "project" ] ~doc)
+;;
+
 let working_time_t =
   C.Term.(
     const working_time
@@ -217,7 +228,8 @@ let working_time_t =
     $ api_pwd
     $ begin_date
     $ end_date
-    $ emit_column_headers)
+    $ emit_column_headers
+    $ working_time_project_names)
 ;;
 
 let working_time_cmd =

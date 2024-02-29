@@ -43,7 +43,12 @@ module Working_time : sig
   (** [exec ~project_name (module R) begin_date end_date] is a list of all
       working-day entries between [begin_date] and [end_date] (inclusively) or a
       string error. *)
-  val exec : (module Repo.S) -> Date.t -> Date.t -> t list Repo.or_error
+  val exec
+    :  ?project_names:string list
+    -> (module Repo.S)
+    -> Date.t
+    -> Date.t
+    -> t list Repo.or_error
 
   (** [print_csv pairs] prints all working-time entries to stdout. *)
   val print_csv : bool -> t list -> unit
