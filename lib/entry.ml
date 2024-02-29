@@ -1,5 +1,6 @@
 type t =
   { date : Ptime.t
+  ; end_string : string
   ; duration : float
   ; activity : int option
   ; description : string option
@@ -13,25 +14,41 @@ let description { description; _ } = description
 let with_description t description = { t with description }
 let activity { activity; _ } = activity
 
-let split_timestamp s =
+let date_string_from_timestamp s =
   match Str.split (Str.regexp "T") s with
   | [] -> ""
   | x :: _ -> x
 ;;
 
-let date_string { date; _ } = Ptime.to_rfc3339 date |> split_timestamp
+let time_string_from_timestamp s =
+  match Str.split (Str.regexp "T") s with
+  | [] -> ""
+  | _ :: [] -> ""
+  | _ :: x :: _ -> String.sub x 0 8
+;;
+
+let date_string { date; _ } =
+  Ptime.to_rfc3339 date |> date_string_from_timestamp
+;;
+
+let start_time_string { date; _ } =
+  Ptime.to_rfc3339 date |> time_string_from_timestamp
+;;
+
+let end_time_string { end_string; _ } = time_string_from_timestamp end_string
 
 module D = Decoder.Yojson.Safe
 
 let decoder =
   let open D.Syntax in
   let* date = D.field "begin" Api.timestamp_decoder in
+  let* end_string = D.field "end" D.string in
   let* description = D.optional @@ D.field "description" D.string in
   let* activity = D.optional @@ D.field "activity" D.int in
   let* duration' = D.field "duration" D.int in
   let duration = float_of_int duration' /. 60. /. 60. in
   let* project = D.optional @@ D.field "project" D.int in
-  D.return { date; duration; activity; description; project }
+  D.return { date; end_string; duration; activity; description; project }
 ;;
 
 let encoder begin_date_time end_date_time project activity description =

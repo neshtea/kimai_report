@@ -48,6 +48,25 @@ let percentage api_url api_user api_pwd begin_date end_date by_customers =
   | Ok percentages -> K.Report.Percentage.print_csv percentages
 ;;
 
+let working_time
+  api_url
+  api_user
+  api_pwd
+  begin_date
+  end_date
+  emit_column_headers
+  =
+  let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
+  let module R = K.Repo.Cohttp (RC) in
+  match
+    K.Report.Working_time.exec (module R) begin_date end_date |> Lwt_main.run
+  with
+  | Error err -> prerr_endline @@ "Error: " ^ err
+  | Ok timesheet ->
+    let () = K.Report.Working_time.print_csv emit_column_headers timesheet in
+    ()
+;;
+
 let record
   api_url
   api_user
@@ -190,6 +209,23 @@ let percentage_cmd =
   C.Cmd.v info percentage_t
 ;;
 
+let working_time_t =
+  C.Term.(
+    const working_time
+    $ api_url
+    $ api_user
+    $ api_pwd
+    $ begin_date
+    $ end_date
+    $ emit_column_headers)
+;;
+
+let working_time_cmd =
+  let doc = "Generate a working-time sheet." in
+  let info = C.Cmd.info "working_time" ~doc in
+  C.Cmd.v info working_time_t
+;;
+
 let port =
   let doc = "The port on which the webserver should listen" in
   C.Arg.(value @@ opt int 8080 @@ info [ "port" ] ~doc)
@@ -257,7 +293,9 @@ let main_cmd =
      timesheet entries."
   in
   let info = C.Cmd.info "kimai_report" ~doc in
-  C.Cmd.group info [ timesheet_cmd; percentage_cmd; server_cmd; record_cmd ]
+  C.Cmd.group
+    info
+    [ timesheet_cmd; percentage_cmd; working_time_cmd; server_cmd; record_cmd ]
 ;;
 
 let main () = exit (C.Cmd.eval main_cmd)

@@ -188,3 +188,66 @@ module Percentage = struct
       entries
   ;;
 end
+
+module Working_time = struct
+  type t =
+    { date : string
+    ; start_time : string
+    ; end_time : string
+    ; duration : float
+    }
+
+  let date { date; _ } = date
+  let start_time { start_time; _ } = start_time
+  let end_time { end_time; _ } = end_time
+  let duration { duration; _ } = duration
+
+  module SM = Map.Make (String)
+
+  let earlier t1 t2 = if compare t1 t2 <= 0 then t1 else t2
+  let later t1 t2 = if compare t2 t2 <= 0 then t1 else t2
+
+  let exec (module R : Repo.S) begin_date end_date =
+    let ( let* ) = Api.bind in
+    let* timesheet = R.find_timesheet begin_date end_date in
+    List.fold_left
+      (fun mp entry ->
+        SM.update
+          (Entry.date_string entry)
+          (fun workday_opt ->
+            match workday_opt with
+            | Some { start_time; end_time; duration; _ } ->
+              Some
+                { date = Entry.date_string entry
+                ; start_time =
+                    earlier start_time @@ Entry.start_time_string entry
+                ; end_time = later end_time @@ Entry.end_time_string entry
+                ; duration = duration +. Entry.duration entry
+                }
+            | None ->
+              Some
+                { date = Entry.date_string entry
+                ; start_time = Entry.start_time_string entry
+                ; end_time = Entry.end_time_string entry
+                ; duration = Entry.duration entry
+                })
+          mp)
+      SM.empty
+      timesheet
+    |> SM.bindings
+    |> List.map (fun (_, workday) -> workday)
+    |> Lwt.return_ok
+  ;;
+
+  let print_csv emit_column_headers =
+    if emit_column_headers
+    then Printf.printf "\"Date\",\"Start\",\"End\",\"Duration\"\n";
+    List.iter (fun workday ->
+      Printf.printf
+        "\"%s\",\"%s\",\"%s\",\"%.2f\"\n"
+        (date workday)
+        (start_time workday)
+        (end_time workday)
+        (duration workday))
+  ;;
+end
