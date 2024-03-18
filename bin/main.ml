@@ -169,7 +169,7 @@ let date =
 let begin_date =
   let doc =
     "The earliest date to consider when generating the report. Format is \
-     YYYY-mm-DD. Defaults to the first of the current month."
+     YYYY-mm-DD. Defaults to the first day of the current month."
   in
   C.Arg.(value @@ opt date (K.Date.start_of_month ()) @@ info [ "begin" ] ~doc)
 ;;
@@ -177,9 +177,9 @@ let begin_date =
 let end_date =
   let doc =
     "The latest date to consider when generating the report. Format is \
-     YYYY-mm-DD. Default to todays date."
+     YYYY-mm-DD. Defaults to the last day of the current month.."
   in
-  C.Arg.(value @@ opt date (K.Date.today ()) @@ info [ "end" ] ~doc)
+  C.Arg.(value @@ opt date (K.Date.end_of_month ()) @@ info [ "end" ] ~doc)
 ;;
 
 let percentage_by_customers =

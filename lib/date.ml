@@ -47,3 +47,31 @@ let start_of_month () =
   let { year; month; _ } = today () in
   { year; month; day = 1 }
 ;;
+
+let end_of_month () =
+  let { year; month; _ } = today () in
+  let { year; month; day } =
+    { year = (if month = 12 then year + 1 else year)
+    ; month = (if month = 12 then 1 else month + 1)
+    ; day = 1
+    }
+  in
+  let one_s = Ptime.Span.of_int_s 1 in
+  let timestamp_first_of_month =
+    match Ptime.of_date_time ((year, month, day), ((0, 0, 0), 0)) with
+    | None ->
+      raise
+        (Date_format_error
+           (Printf.sprintf "timestamp first of month %d-%d-%d" year month day))
+    | Some timestamp -> timestamp
+  in
+  let timestamp_end_of_month =
+    match Ptime.sub_span timestamp_first_of_month one_s with
+    | None ->
+      raise
+        (Date_format_error
+           (Printf.sprintf "timestamp end of month %d-%d-%d" year month day))
+    | Some timestamp -> timestamp
+  in
+  of_ptime timestamp_end_of_month
+;;
