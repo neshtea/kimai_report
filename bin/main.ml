@@ -37,11 +37,24 @@ let timesheet
     else ()
 ;;
 
-let percentage api_url api_user api_pwd begin_date end_date by_customers =
+let percentage
+  api_url
+  api_user
+  api_pwd
+  begin_date
+  end_date
+  by_customers
+  project_names
+  =
   let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
   let module R = K.Repo.Cohttp (RC) in
   match
-    K.Report.Percentage.exec ~by_customers (module R) begin_date end_date
+    K.Report.Percentage.exec
+      ~by_customers
+      ~project_names
+      (module R)
+      begin_date
+      end_date
     |> Lwt_main.run
   with
   | Error err -> prerr_endline @@ "Error: " ^ err
@@ -194,6 +207,15 @@ let timesheet_cmd =
   C.Cmd.v info timesheet_t
 ;;
 
+let ignore_project_names =
+  let doc =
+    "Name of the projects that are not included in the working-times report. \
+     If not given, all projects are included. If given more than once, does \
+     not include all the given projects."
+  in
+  C.Arg.(value @@ opt_all string [] @@ info [ "project" ] ~doc)
+;;
+
 let percentage_t =
   C.Term.(
     const percentage
@@ -202,22 +224,14 @@ let percentage_t =
     $ api_pwd
     $ begin_date
     $ end_date
-    $ percentage_by_customers)
+    $ percentage_by_customers
+    $ ignore_project_names)
 ;;
 
 let percentage_cmd =
   let doc = "Generate the percentages of projects to logged time." in
   let info = C.Cmd.info "percentage" ~doc in
   C.Cmd.v info percentage_t
-;;
-
-let working_time_project_names =
-  let doc =
-    "Name of the projects that are not included in the working-times report. \
-     If not given, all projects are included. If given more than once, does \
-     not include all the given projects."
-  in
-  C.Arg.(value @@ opt_all string [] @@ info [ "project" ] ~doc)
 ;;
 
 let working_time_t =
@@ -229,7 +243,7 @@ let working_time_t =
     $ begin_date
     $ end_date
     $ emit_column_headers
-    $ working_time_project_names)
+    $ ignore_project_names)
 ;;
 
 let working_time_cmd =

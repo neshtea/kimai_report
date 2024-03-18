@@ -104,6 +104,17 @@ end
 module Percentage = struct
   module SM = Map.Make (String)
 
+  let projects_matches project_ids =
+    if [] == project_ids
+    then fun _ -> false
+    else
+      fun entry ->
+      let project = Entry.project entry in
+      match project with
+      | None -> false
+      | Some project_id -> List.mem project_id project_ids
+  ;;
+
   let project_labels (module R : Repo.S) projects =
     let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
     let project_by_id = RU.by_id (module Project) projects in
@@ -149,14 +160,36 @@ module Percentage = struct
       time_entries
   ;;
 
-  let exec ?(by_customers = false) (module R : Repo.S) begin_date end_date =
+  let exec
+    ?(by_customers = false)
+    ?(project_names = [])
+    (module R : Repo.S)
+    begin_date
+    end_date
+    =
     let ( let* ) = Api.bind in
     let* projects = R.find_projects () in
     let* customers = R.find_customers () in
     let* timesheet = R.find_timesheet begin_date end_date in
+    let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
+    let id_by_name = RU.id_by_name (module Project) projects in
+    let some_project_ids, _ =
+      List.fold_left
+        (fun (some_project_ids, none_project_names) project_name ->
+          match id_by_name project_name with
+          | Some id -> id :: some_project_ids, none_project_names
+          | None -> some_project_ids, project_name :: none_project_names)
+        ([], [])
+        project_names
+    in
+    let filtered_timesheet =
+      List.filter
+        (fun entry -> not (projects_matches some_project_ids entry))
+        timesheet
+    in
     let durations =
       durations_by_label
-        timesheet
+        filtered_timesheet
         (if by_customers
          then customer_labels (module R) projects customers
          else project_labels (module R) projects)
