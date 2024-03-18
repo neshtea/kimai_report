@@ -18,7 +18,7 @@ module Timesheet : sig
   val overall_duration : Entry.t list -> float
 
   (** [print_overall_duration pairs] prints the overall duration of the
-      calculated timesheet to stdout. *)
+      calculated timesheet to stderr. *)
   val print_overall_duration : Entry.t list -> unit
 end
 
@@ -53,4 +53,12 @@ module Working_time : sig
 
   (** [print_csv pairs] prints all working-time entries to stdout. *)
   val print_csv : bool -> t list -> unit
+
+  (** [overall_duration pairs] calculates the overall duration of the calculated
+      working time. *)
+  val overall_duration : t list -> float
+
+  (** [print_overall_duration pairs] prints the overall duration of the
+      calculated working time to stderr. *)
+  val print_overall_duration : t list -> unit
 end

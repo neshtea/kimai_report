@@ -67,6 +67,7 @@ let working_time
   api_pwd
   begin_date
   end_date
+  show_overall_duration
   emit_column_headers
   project_names
   =
@@ -77,9 +78,11 @@ let working_time
     |> Lwt_main.run
   with
   | Error err -> prerr_endline @@ "Error: " ^ err
-  | Ok timesheet ->
-    let () = K.Report.Working_time.print_csv emit_column_headers timesheet in
-    ()
+  | Ok working_time ->
+    let () = K.Report.Working_time.print_csv emit_column_headers working_time in
+    if show_overall_duration
+    then K.Report.Working_time.print_overall_duration working_time
+    else ()
 ;;
 
 let record
@@ -242,6 +245,7 @@ let working_time_t =
     $ api_pwd
     $ begin_date
     $ end_date
+    $ show_overall_duration
     $ emit_column_headers
     $ ignore_project_names)
 ;;

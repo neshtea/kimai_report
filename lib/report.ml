@@ -257,7 +257,7 @@ module Working_time = struct
     in
     timesheet
     |> List.filter (fun entry ->
-      not (Timesheet.projects_matches some_project_ids entry))
+      not (Percentage.projects_matches some_project_ids entry))
     |> List.fold_left
          (fun mp entry ->
            SM.update
@@ -296,5 +296,13 @@ module Working_time = struct
         (start_time workday)
         (end_time workday)
         (duration workday))
+  ;;
+
+  let overall_duration working_time =
+    List.fold_left (fun acc entry -> acc +. duration entry) 0. working_time
+  ;;
+
+  let print_overall_duration working_time =
+    working_time |> overall_duration |> Printf.eprintf "Overall hours:\n%.2f"
   ;;
 end
