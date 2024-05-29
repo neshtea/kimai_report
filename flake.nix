@@ -12,7 +12,11 @@
 
   outputs = { self, nixpkgs, ... }@inputs:
     let
-      supportedSystems = with inputs.flake-utils.lib.system; [ aarch64-darwin ];
+      supportedSystems = with inputs.flake-utils.lib.system; [
+        aarch64-darwin
+        x86_64-darwin
+        x86_64-linux
+      ];
     in inputs.flake-utils.lib.eachSystem supportedSystems (system:
       let
         overlays = [ inputs.ocaml-overlay.overlays.default ];
