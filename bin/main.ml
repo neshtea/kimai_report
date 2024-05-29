@@ -37,14 +37,52 @@ let timesheet
     else ()
 ;;
 
-let percentage api_url api_user api_pwd begin_date end_date =
+let percentage
+  api_url
+  api_user
+  api_pwd
+  begin_date
+  end_date
+  by_customers
+  project_names
+  =
   let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
   let module R = K.Repo.Cohttp (RC) in
   match
-    K.Report.Percentage.exec (module R) begin_date end_date |> Lwt_main.run
+    K.Report.Percentage.exec
+      ~by_customers
+      ~project_names
+      (module R)
+      begin_date
+      end_date
+    |> Lwt_main.run
   with
   | Error err -> prerr_endline @@ "Error: " ^ err
   | Ok percentages -> K.Report.Percentage.print_csv percentages
+;;
+
+let working_time
+  api_url
+  api_user
+  api_pwd
+  begin_date
+  end_date
+  show_overall_duration
+  emit_column_headers
+  project_names
+  =
+  let module RC = (val K.Api.make_request_cfg api_url api_user api_pwd) in
+  let module R = K.Repo.Cohttp (RC) in
+  match
+    K.Report.Working_time.exec ~project_names (module R) begin_date end_date
+    |> Lwt_main.run
+  with
+  | Error err -> prerr_endline @@ "Error: " ^ err
+  | Ok working_time ->
+    let () = K.Report.Working_time.print_csv emit_column_headers working_time in
+    if show_overall_duration
+    then K.Report.Working_time.print_overall_duration working_time
+    else ()
 ;;
 
 let record
@@ -131,7 +169,7 @@ let date =
 let begin_date =
   let doc =
     "The earliest date to consider when generating the report. Format is \
-     YYYY-mm-DD. Defaults to the first of the current month."
+     YYYY-mm-DD. Defaults to the first day of the current month."
   in
   C.Arg.(value @@ opt date (K.Date.start_of_month ()) @@ info [ "begin" ] ~doc)
 ;;
@@ -139,9 +177,17 @@ let begin_date =
 let end_date =
   let doc =
     "The latest date to consider when generating the report. Format is \
-     YYYY-mm-DD. Default to todays date."
+     YYYY-mm-DD. Defaults to the last day of the current month.."
   in
-  C.Arg.(value @@ opt date (K.Date.today ()) @@ info [ "end" ] ~doc)
+  C.Arg.(value @@ opt date (K.Date.end_of_month ()) @@ info [ "end" ] ~doc)
+;;
+
+let percentage_by_customers =
+  let doc =
+    "Whether to calculate percentages per customers or per projects. Default \
+     is per projects."
+  in
+  C.Arg.(value @@ flag @@ info [ "by_customers" ] ~doc)
 ;;
 
 let timesheet_t =
@@ -164,15 +210,50 @@ let timesheet_cmd =
   C.Cmd.v info timesheet_t
 ;;
 
+let ignore_project_names =
+  let doc =
+    "Name of the projects that are not included in the working-times report. \
+     If not given, all projects are included. If given more than once, does \
+     not include all the given projects."
+  in
+  C.Arg.(value @@ opt_all string [] @@ info [ "project" ] ~doc)
+;;
+
 let percentage_t =
   C.Term.(
-    const percentage $ api_url $ api_user $ api_pwd $ begin_date $ end_date)
+    const percentage
+    $ api_url
+    $ api_user
+    $ api_pwd
+    $ begin_date
+    $ end_date
+    $ percentage_by_customers
+    $ ignore_project_names)
 ;;
 
 let percentage_cmd =
   let doc = "Generate the percentages of projects to logged time." in
   let info = C.Cmd.info "percentage" ~doc in
   C.Cmd.v info percentage_t
+;;
+
+let working_time_t =
+  C.Term.(
+    const working_time
+    $ api_url
+    $ api_user
+    $ api_pwd
+    $ begin_date
+    $ end_date
+    $ show_overall_duration
+    $ emit_column_headers
+    $ ignore_project_names)
+;;
+
+let working_time_cmd =
+  let doc = "Generate a working-time sheet." in
+  let info = C.Cmd.info "working_time" ~doc in
+  C.Cmd.v info working_time_t
 ;;
 
 let port =
@@ -242,7 +323,9 @@ let main_cmd =
      timesheet entries."
   in
   let info = C.Cmd.info "kimai_report" ~doc in
-  C.Cmd.group info [ timesheet_cmd; percentage_cmd; server_cmd; record_cmd ]
+  C.Cmd.group
+    info
+    [ timesheet_cmd; percentage_cmd; working_time_cmd; server_cmd; record_cmd ]
 ;;
 
 let main () = exit (C.Cmd.eval main_cmd)

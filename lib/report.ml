@@ -104,7 +104,20 @@ end
 module Percentage = struct
   module SM = Map.Make (String)
 
-  let project_durations time_entries project_by_id =
+  let projects_matches project_ids =
+    if [] == project_ids
+    then fun _ -> false
+    else
+      fun entry ->
+      let project = Entry.project entry in
+      match project with
+      | None -> false
+      | Some project_id -> List.mem project_id project_ids
+  ;;
+
+  let project_labels (module R : Repo.S) projects =
+    let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
+    let project_by_id = RU.by_id (module Project) projects in
     let label entry =
       match Entry.project entry with
       | None -> "unknown"
@@ -113,10 +126,32 @@ module Percentage = struct
          | None -> "unknown"
          | Some p -> Project.name p)
     in
+    label
+  ;;
+
+  let customer_labels (module R : Repo.S) projects customers =
+    let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
+    let project_by_id = RU.by_id (module Project) projects in
+    let customer_by_id = RU.by_id (module Customer) customers in
+    let label entry =
+      match Entry.project entry with
+      | None -> "unknown"
+      | Some project_id ->
+        (match project_by_id project_id with
+         | None -> "unknown"
+         | Some p ->
+           (match customer_by_id @@ Project.customer p with
+            | None -> "unknown"
+            | Some c -> Customer.name c))
+    in
+    label
+  ;;
+
+  let durations_by_label time_entries by_label =
     List.fold_left
       (fun m t ->
         SM.update
-          (label t)
+          (by_label t)
           (function
             | None -> Some (Entry.duration t)
             | Some f -> Some (f +. Entry.duration t))
@@ -125,13 +160,40 @@ module Percentage = struct
       time_entries
   ;;
 
-  let exec (module R : Repo.S) begin_date end_date =
+  let exec
+    ?(by_customers = false)
+    ?(project_names = [])
+    (module R : Repo.S)
+    begin_date
+    end_date
+    =
     let ( let* ) = Api.bind in
     let* projects = R.find_projects () in
+    let* customers = R.find_customers () in
     let* timesheet = R.find_timesheet begin_date end_date in
     let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
-    let project_by_id = RU.by_id (module Project) projects in
-    let durations = project_durations timesheet project_by_id in
+    let id_by_name = RU.id_by_name (module Project) projects in
+    let some_project_ids, _ =
+      List.fold_left
+        (fun (some_project_ids, none_project_names) project_name ->
+          match id_by_name project_name with
+          | Some id -> id :: some_project_ids, none_project_names
+          | None -> some_project_ids, project_name :: none_project_names)
+        ([], [])
+        project_names
+    in
+    let filtered_timesheet =
+      List.filter
+        (fun entry -> not (projects_matches some_project_ids entry))
+        timesheet
+    in
+    let durations =
+      durations_by_label
+        filtered_timesheet
+        (if by_customers
+         then customer_labels (module R) projects customers
+         else project_labels (module R) projects)
+    in
     let overall_duration =
       SM.bindings durations |> List.fold_left (fun acc kv -> acc +. snd kv) 0.0
     in
@@ -141,6 +203,9 @@ module Percentage = struct
       let percentage = duration /. overall_duration *. 100. in
       int_floor duration, percentage, int_floor percentage)
     |> SM.bindings
+    |> List.sort
+         (fun (_, (overall_hours_1, _, _)) (_, (overall_hours_2, _, _)) ->
+            compare overall_hours_2 overall_hours_1)
     |> Lwt.return_ok
   ;;
 
@@ -154,5 +219,90 @@ module Percentage = struct
           percentage
           percentage_rounded)
       entries
+  ;;
+end
+
+module Working_time = struct
+  type t =
+    { date : string
+    ; start_time : string
+    ; end_time : string
+    ; duration : float
+    }
+
+  let date { date; _ } = date
+  let start_time { start_time; _ } = start_time
+  let end_time { end_time; _ } = end_time
+  let duration { duration; _ } = duration
+
+  module SM = Map.Make (String)
+
+  let earlier t1 t2 = if compare t1 t2 <= 0 then t1 else t2
+  let later t1 t2 = if compare t2 t2 <= 0 then t1 else t2
+
+  let exec ?(project_names = []) (module R : Repo.S) begin_date end_date =
+    let ( let* ) = Api.bind in
+    let* timesheet = R.find_timesheet begin_date end_date in
+    let* projects = R.find_projects () in
+    let module RU = Repo.Repo_utils (R) (Repo.Bi_lookup.Map) in
+    let id_by_name = RU.id_by_name (module Project) projects in
+    let some_project_ids, _ =
+      List.fold_left
+        (fun (some_project_ids, none_project_names) project_name ->
+          match id_by_name project_name with
+          | Some id -> id :: some_project_ids, none_project_names
+          | None -> some_project_ids, project_name :: none_project_names)
+        ([], [])
+        project_names
+    in
+    timesheet
+    |> List.filter (fun entry ->
+      not (Percentage.projects_matches some_project_ids entry))
+    |> List.fold_left
+         (fun mp entry ->
+           SM.update
+             (Entry.date_string entry)
+             (fun workday_opt ->
+               match workday_opt with
+               | Some { start_time; end_time; duration; _ } ->
+                 Some
+                   { date = Entry.date_string entry
+                   ; start_time =
+                       earlier start_time @@ Entry.start_time_string entry
+                   ; end_time = later end_time @@ Entry.end_time_string entry
+                   ; duration = duration +. Entry.duration entry
+                   }
+               | None ->
+                 Some
+                   { date = Entry.date_string entry
+                   ; start_time = Entry.start_time_string entry
+                   ; end_time = Entry.end_time_string entry
+                   ; duration = Entry.duration entry
+                   })
+             mp)
+         SM.empty
+    |> SM.bindings
+    |> List.map (fun (_, workday) -> workday)
+    |> Lwt.return_ok
+  ;;
+
+  let print_csv emit_column_headers =
+    if emit_column_headers
+    then Printf.printf "\"Date\",\"Start\",\"End\",\"Duration\"\n";
+    List.iter (fun workday ->
+      Printf.printf
+        "\"%s\",\"%s\",\"%s\",\"%.2f\"\n"
+        (date workday)
+        (start_time workday)
+        (end_time workday)
+        (duration workday))
+  ;;
+
+  let overall_duration working_time =
+    List.fold_left (fun acc entry -> acc +. duration entry) 0. working_time
+  ;;
+
+  let print_overall_duration working_time =
+    working_time |> overall_duration |> Printf.eprintf "Overall hours:\n%.2f"
   ;;
 end

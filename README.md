@@ -23,6 +23,10 @@ Generate a timesheet.  Optionally, generate it for one project (by name).
 
 Generate the percentages (projects to logged time spent on these projects).
 
+### `working_time`
+
+Generate a working-time report.
+
 ### `server`
 
 A small webclient for fetching and displaying reports.
