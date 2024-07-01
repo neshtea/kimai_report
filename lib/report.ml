@@ -81,15 +81,23 @@ module Timesheet = struct
            (String.concat ", " none_project_names)
   ;;
 
+  (* RFC 4180: escape double-quotes by doubling them *)
+  let escape_double_quotes s = Str.global_replace (Str.regexp {|\"|}) "\"\"" s
+
   let print_csv emit_column_headers =
     if emit_column_headers
     then Printf.printf "\"Date\",\"Duration\",\"Description\"\n";
     List.iter (fun entry ->
+      let description =
+        Entry.description entry
+        |> Option.map escape_double_quotes
+        |> Option.value ~default:"no description"
+      in
       Printf.printf
         "\"%s\",\"%.2f\",\"%s\"\n"
         (Entry.date_string entry)
         (Entry.duration entry)
-        (Option.value (Entry.description entry) ~default:"no description"))
+        description)
   ;;
 
   let overall_duration timesheet =
